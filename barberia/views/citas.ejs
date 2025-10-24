@@ -1,0 +1,254 @@
+<%- include('partials/header', { titulo: 'Citas' }) %>
+
+<!-- Logo lateral (solo pantallas grandes) -->
+<style>
+  .logo-side {
+    position: fixed;
+    left: 10px;           /* Ajusta la distancia al borde izquierdo */
+    top: 96px;            /* Ajusta para que no tape la navbar */
+    width: 260px;         /* Tamaño del logo */
+    opacity: .10;         /* Transparencia para que no moleste */
+    z-index: 0;           /* Debajo del contenido */
+    pointer-events: none; /* No bloquea clics del contenido */
+    filter: grayscale(100%);
+  }
+  @media (max-width: 1399.98px) { /* Se oculta en pantallas medianas/pequeñas */
+    .logo-side { display: none; }
+  }
+</style>
+
+<div class="logo-side">
+  <img src="/img/Logo.jpg" alt="Logo Barbería Studio 90's" style="width:100%;height:auto;">
+</div>
+
+
+<%
+/* ===== Helpers EJS ===== */
+function fmtDateYMD(d) {
+  if (!d) return '';
+  try {
+    if (Object.prototype.toString.call(d) === '[object Date]') {
+      return new Date(d.getTime() - (d.getTimezoneOffset()*60000)).toISOString().split('T')[0];
+    }
+    const s = String(d);
+    if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0,10);
+    const dd = new Date(s);
+    if (!isNaN(dd)) return dd.toISOString().split('T')[0];
+  } catch {}
+  return '';
+}
+function fmtTimeHM(t) {
+  if (!t) return '';
+  try {
+    if (Object.prototype.toString.call(t) === '[object Date]') {
+      return t.toTimeString().slice(0,5);
+    }
+    const s = String(t);
+    if (s.includes('T')) {
+      const dd = new Date(s);
+      if (!isNaN(dd)) return dd.toTimeString().slice(0,5);
+    }
+    if (/^\d{2}:\d{2}:\d{2}$/.test(s)) return s.slice(0,5);
+    if (/^\d{1,2}:\d{2}$/.test(s)) return s.padStart(5,'0');
+    if (/^\d{1,2}:\d{2}:\d{2}\.\d+$/.test(s)) return s.slice(0,5);
+  } catch {}
+  return '';
+}
+
+/* ===== Roles para UX ===== */
+const isCliente = (typeof rol !== 'undefined' && rol === 'cliente');
+const isBarbero = (typeof rol !== 'undefined' && rol === 'barbero');
+
+const selectedClienteID =
+  (citaEditar && citaEditar.ClienteID) ||
+  (isCliente && clientes && clientes[0] && clientes[0].ClienteID) || '';
+
+const selectedBarberoID =
+  (citaEditar && citaEditar.BarberoID) ||
+  (isBarbero && barberos && barberos[0] && barberos[0].BarberoID) || '';
+%>
+
+<h2 class="mb-4">Gestión de Citas</h2>
+
+<form action="<%= citaEditar ? '/citas/editar/' + citaEditar.CitaID : '/citas/agregar' %>"
+      method="POST"
+      class="mb-4 needs-validation" novalidate id="formCita">
+
+  <div class="row g-3">
+    <!-- Cliente -->
+    <div class="col-md-3">
+      <label class="form-label">Cliente</label>
+      <select name="ClienteID" class="form-select" <%= isCliente ? 'disabled' : '' %> required>
+        <option value="">Seleccione…</option>
+        <% (clientes || []).forEach(c => { %>
+          <option value="<%= c.ClienteID %>" <%= (selectedClienteID === c.ClienteID) ? 'selected' : '' %>>
+            <%= c.Nombre %> <%= c.Apellido1 %>
+          </option>
+        <% }) %>
+      </select>
+      <% if (isCliente) { %>
+        <!-- Al estar disabled el select no envía valor; lo enviamos aquí -->
+        <input type="hidden" name="ClienteID" value="<%= selectedClienteID %>">
+      <% } %>
+      <div class="invalid-feedback">Seleccione un cliente.</div>
+    </div>
+
+    <!-- Barbero -->
+    <div class="col-md-3">
+      <label class="form-label">Barbero</label>
+      <select name="BarberoID" class="form-select" <%= isBarbero ? 'disabled' : '' %> required>
+        <option value="">Seleccione…</option>
+        <% (barberos || []).forEach(b => { %>
+          <option value="<%= b.BarberoID %>" <%= (selectedBarberoID === b.BarberoID) ? 'selected' : '' %>>
+            <%= b.Nombre %> <%= b.Apellido1 %>
+          </option>
+        <% }) %>
+      </select>
+      <% if (isBarbero) { %>
+        <input type="hidden" name="BarberoID" value="<%= selectedBarberoID %>">
+      <% } %>
+      <div class="invalid-feedback">Seleccione un barbero.</div>
+    </div>
+
+    <!-- Servicio -->
+    <div class="col-md-3">
+      <label class="form-label">Servicio</label>
+      <select name="ServicioID" class="form-select" required>
+        <option value="">Seleccione…</option>
+        <% (servicios || []).forEach(s => { %>
+          <option value="<%= s.ServicioID %>" <%= citaEditar && citaEditar.ServicioID === s.ServicioID ? 'selected' : '' %>>
+            <%= s.Nombre %>
+          </option>
+        <% }) %>
+      </select>
+      <div class="invalid-feedback">Seleccione un servicio.</div>
+    </div>
+
+    <!-- Estado -->
+    <div class="col-md-3">
+      <label class="form-label">Estado</label>
+      <select name="Estado" class="form-select" required>
+        <option value="P" <%= citaEditar && citaEditar.Estado==='P' ? 'selected' : '' %>>Pendiente</option>
+        <option value="C" <%= citaEditar && citaEditar.Estado==='C' ? 'selected' : '' %>>Cancelada</option>
+        <option value="R" <%= citaEditar && citaEditar.Estado==='R' ? 'selected' : '' %>>Realizada</option>
+      </select>
+      <div class="invalid-feedback">Seleccione el estado.</div>
+    </div>
+
+    <!-- Fecha -->
+    <div class="col-md-3">
+      <label class="form-label">Fecha</label>
+      <input type="date" name="Fecha" class="form-control"
+             value="<%= citaEditar ? fmtDateYMD(citaEditar.Fecha) : '' %>"
+             required>
+      <div class="invalid-feedback">Seleccione la fecha.</div>
+    </div>
+
+    <!-- Hora inicio -->
+    <div class="col-md-3">
+      <label class="form-label">Hora inicio</label>
+      <input type="time" name="HoraInicio" class="form-control" step="60"
+             value="<%= citaEditar ? fmtTimeHM(citaEditar.HoraInicio) : '' %>"
+             required>
+      <div class="invalid-feedback">Ingrese la hora de inicio.</div>
+    </div>
+
+    <!-- Hora fin -->
+    <div class="col-md-3">
+      <label class="form-label">Hora fin</label>
+      <input type="time" name="HoraFin" class="form-control" step="60"
+             value="<%= citaEditar ? fmtTimeHM(citaEditar.HoraFin) : '' %>"
+             required>
+      <div class="invalid-feedback">Ingrese la hora de fin.</div>
+    </div>
+
+    <!-- Notas -->
+    <div class="col-md-3">
+      <label class="form-label">Notas</label>
+      <input type="text" name="Notas" class="form-control"
+             value="<%= citaEditar ? (citaEditar.Notas || '') : '' %>">
+    </div>
+  </div>
+
+  <div class="mt-3">
+    <button type="submit" class="btn <%= citaEditar ? 'btn-primary' : 'btn-success' %>">
+      <%= citaEditar ? 'Actualizar' : 'Registrar' %> cita
+    </button>
+    <% if (citaEditar) { %>
+      <a href="/citas" class="btn btn-secondary">Cancelar</a>
+    <% } %>
+  </div>
+</form>
+
+<table class="table table-bordered table-striped">
+  <thead class="table-dark">
+    <tr>
+      <th>ID</th>
+      <th>Cliente</th>
+      <th>Barbero</th>
+      <th>Servicio</th>
+      <th>Fecha</th>
+      <th>Inicio</th>
+      <th>Fin</th>
+      <th>Estado</th>
+      <th>Notas</th>
+      <th>Acciones</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% (citas || []).forEach(c => { %>
+      <tr>
+        <td><%= c.CitaID %></td>
+        <td><%= c.ClienteNombre %></td>
+        <td><%= c.BarberoNombre %></td>
+        <td><%= c.ServicioNombre %></td>
+        <td><%= fmtDateYMD(c.Fecha) %></td>
+        <td><%= fmtTimeHM(c.HoraInicio) %></td>
+        <td><%= fmtTimeHM(c.HoraFin) %></td>
+        <td>
+          <span class="badge <%= c.Estado==='P' ? 'bg-warning text-dark' : (c.Estado==='R' ? 'bg-success' : 'bg-danger') %>">
+            <%= c.Estado==='P' ? 'Pendiente' : (c.Estado==='R' ? 'Realizada' : 'Cancelada') %>
+          </span>
+        </td>
+        <td><%= c.Notas || '' %></td>
+        <td>
+          <a href="/citas/editar/<%= c.CitaID %>" class="btn btn-sm btn-primary">Editar</a>
+          <form action="/citas/eliminar/<%= c.CitaID %>" method="POST" class="d-inline"
+                onsubmit="return confirm('¿Eliminar esta cita?')">
+            <button class="btn btn-sm btn-danger">Eliminar</button>
+          </form>
+        </td>
+      </tr>
+    <% }) %>
+  </tbody>
+</table>
+
+<script>
+  // Validación Bootstrap + regla HoraFin > HoraInicio
+  (function () {
+    const form = document.getElementById('formCita');
+    form.addEventListener('submit', function (ev) {
+      if (!form.checkValidity()) {
+        ev.preventDefault();
+        ev.stopPropagation();
+      }
+      const hi = form.HoraInicio.value;
+      const hf = form.HoraFin.value;
+      if (hi && hf) {
+        const toMin = s => {
+          const parts = s.split(':').map(Number);
+          if (parts.length < 2 || isNaN(parts[0]) || isNaN(parts[1])) return NaN;
+          return parts[0] * 60 + parts[1];
+        };
+        if (toMin(hf) <= toMin(hi)) {
+          ev.preventDefault();
+          ev.stopPropagation();
+          alert('La hora de fin debe ser mayor que la hora de inicio.');
+        }
+      }
+      form.classList.add('was-validated');
+    }, false);
+  })();
+</script>
+
+<%- include('partials/footer') %>

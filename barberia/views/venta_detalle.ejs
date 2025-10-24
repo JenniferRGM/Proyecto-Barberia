@@ -1,0 +1,38 @@
+<%- include('partials/header', { titulo: 'Detalle de venta' }) %>
+
+<h2 class="mb-3">Venta <code><%= venta.VentaID %></code></h2>
+
+<div class="row mb-3">
+  <div class="col-md-4"><b>Cliente:</b> <%= venta.Cliente %></div>
+  <div class="col-md-4"><b>Fecha:</b> <%= new Date(venta.FechaVenta).toISOString().split('T')[0] %></div>
+  <div class="col-md-4"><b>Total:</b> ₡<%= Number(venta.MontoTotal).toFixed(2) %></div>
+</div>
+
+<table class="table table-bordered">
+  <thead class="table-dark">
+    <tr>
+      <th>Detalle</th>
+      <th>Tipo</th>
+      <th>Cantidad</th>
+      <th class="text-end">Precio</th>
+      <th class="text-end">Subtotal</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% detalle.forEach(d => { %>
+      <tr>
+        <td><%= d.ServicioNombre || d.ProductoNombre %></td>
+        <td><%= d.ServicioID ? 'Servicio' : 'Producto' %></td>
+        <td><%= d.Cantidad %></td>
+        <td class="text-end">₡<%= Number(d.PrecioUnitario).toFixed(2) %></td>
+        <td class="text-end">₡<%= Number(d.Subtotal).toFixed(2) %></td>
+      </tr>
+    <% }) %>
+  </tbody>
+</table>
+
+<div class="text-end">
+  <a href="/ventas" class="btn btn-secondary">Volver</a>
+</div>
+
+<%- include('partials/footer') %>

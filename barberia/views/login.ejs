@@ -1,0 +1,150 @@
+<%- include('partials/header', { titulo: 'Iniciar Sesión', hideNav: true }) %>
+<!-- Logo lateral (solo pantallas grandes) -->
+<style>
+  .logo-side {
+    position: fixed;
+    left: 10px;           /* Ajusta la distancia al borde izquierdo */
+    top: 96px;            /* Ajusta para que no tape la navbar */
+    width: 260px;         /* Tamaño del logo */
+    opacity: .10;         /* Transparencia para que no moleste */
+    z-index: 0;           /* Debajo del contenido */
+    pointer-events: none; /* No bloquea clics del contenido */
+    filter: grayscale(100%);
+  }
+  @media (max-width: 1399.98px) { /* Se oculta en pantallas medianas/pequeñas */
+    .logo-side { display: none; }
+  }
+</style>
+
+<div class="logo-side">
+  <img src="/img/Logo.jpg" alt="Logo Barbería Studio 90's" style="width:100%;height:auto;">
+</div>
+
+<style>
+  .auth-bg { min-height: calc(100vh - 56px);
+    background: radial-gradient(1000px 600px at 50% -200px, #eef5ff 0, #fff 55%, #f7f8fb 100%); }
+  .auth-card { border:0; border-radius:18px; box-shadow:0 20px 40px rgba(0,0,0,.08); }
+  .brand-circle { width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    background:#0d6efd10;color:#0d6efd;font-size:28px;margin:0 auto 12px; }
+</style>
+
+<div class="auth-bg d-flex align-items-center">
+  <div class="container py-5">
+    <div class="row justify-content-center">
+      <div class="col-11 col-md-6 col-lg-4">
+        <div class="card auth-card p-3 p-md-4">
+          <div class="text-center mb-3">
+            <div class="brand-circle">🔐</div>
+            <h4 class="mb-1">Bienvenido a Barbería Studio's 90's</h4>
+            <div class="text-muted small">Ingresa para continuar</div>
+          </div>
+
+          <form action="/login<%= next ? ('?next=' + encodeURIComponent(next)) : '' %>" 
+                method="POST" id="formLogin" class="needs-validation" novalidate>
+            <!-- Preserva next por body también -->
+            <input type="hidden" name="next" value="<%= next || '' %>">
+
+            <div class="mb-3">
+              <label class="form-label">Nombre de usuario</label>
+              <div class="input-group has-validation">
+                <span class="input-group-text">👤</span>
+                <input type="text" class="form-control" name="nombreUsuario"
+                       maxlength="30" minlength="3" autocomplete="username" required
+                       pattern="^[^\s]{3,30}$"
+                       title="Sin espacios. Entre 3 y 30 caracteres."
+                       value="<%= (values && values.nombreUsuario) || '' %>">
+                <div class="invalid-feedback">Ingrese un usuario válido (3–30, sin espacios).</div>
+              </div>
+            </div>
+
+            <div class="mb-2">
+              <label class="form-label">Contraseña</label>
+              <div class="input-group has-validation">
+                <span class="input-group-text">🔒</span>
+                <input type="password" class="form-control" id="pass" name="contrasena"
+                       autocomplete="current-password" minlength="8" required>
+                <button class="btn btn-outline-secondary" type="button" id="togglePass">👁</button>
+                <div class="invalid-feedback">La contraseña debe tener al menos 8 caracteres.</div>
+              </div>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="rec" name="recordarme"
+                       <%= values && values.recordarme ? 'checked' : '' %>>
+                <label class="form-check-label" for="rec">Recordarme</label>
+              </div>
+              <a class="small text-muted" href="#" onclick="alert('Función opcional');return false;">¿Olvidaste tu contraseña?</a>
+            </div>
+
+            <button class="btn btn-primary w-100" id="btnLogin">
+              <span class="spinner-border spinner-border-sm me-2 d-none" id="sp"></span>
+              Ingresar
+            </button>
+          </form>
+
+          <div class="text-center mt-3">
+            <span class="text-muted">¿No tienes cuenta?</span>
+            <a href="/registro" class="ms-1">Regístrate</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast / notificaciones -->
+<div class="position-fixed top-0 end-0 p-3" style="z-index:1100">
+  <div id="appToast" class="toast align-items-center text-bg-primary border-0" role="alert" aria-live="assertive" aria-atomic="true">
+    <div class="d-flex">
+      <div class="toast-body" id="appToastBody">Mensaje</div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Cerrar"></button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Mostrar/ocultar contraseña
+  document.getElementById('togglePass').addEventListener('click', () => {
+    const p = document.getElementById('pass');
+    p.type = p.type === 'password' ? 'text' : 'password';
+  });
+
+  // Bootstrap validation
+  (function(){
+    const form = document.getElementById('formLogin');
+    form.addEventListener('submit', function (e) {
+      if (!form.checkValidity()) {
+        e.preventDefault();
+        e.stopPropagation();
+      } else {
+        // Spinner + deshabilitar botón
+        document.getElementById('btnLogin').setAttribute('disabled','disabled');
+        document.getElementById('sp').classList.remove('d-none');
+      }
+      form.classList.add('was-validated');
+    }, false);
+  })();
+
+  // -------- TOAST ----------
+  const toastData   = <%- JSON.stringify(toast || null) %>;
+  const legacyError = <%- JSON.stringify(error || null) %>;
+  const data = toastData || (legacyError ? { type:'danger', message: legacyError } : null);
+
+  if (data) {
+    const el = document.getElementById('appToast');
+    const body = document.getElementById('appToastBody');
+    el.classList.remove('text-bg-primary','text-bg-success','text-bg-danger','text-bg-warning','text-bg-info');
+    el.classList.add({
+      success: 'text-bg-success',
+      danger:  'text-bg-danger',
+      warning: 'text-bg-warning',
+      info:    'text-bg-info'
+    }[data.type] || 'text-bg-primary');
+    body.textContent = data.message || 'Notificación';
+    const t = bootstrap.Toast.getOrCreateInstance(el, { delay: 3500 });
+    t.show();
+  }
+</script>
+
+<%- include('partials/footer') %>

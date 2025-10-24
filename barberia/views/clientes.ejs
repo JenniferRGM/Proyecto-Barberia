@@ -1,0 +1,211 @@
+<%- include('partials/header', { titulo: 'Clientes' }) %>
+<!-- Logo lateral (solo pantallas grandes) -->
+<style>
+  .logo-side {
+    position: fixed;
+    left: 10px;           /* Ajusta la distancia al borde izquierdo */
+    top: 96px;            /* Ajusta para que no tape la navbar */
+    width: 260px;         /* Tamaño del logo */
+    opacity: .10;         /* Transparencia para que no moleste */
+    z-index: 0;           /* Debajo del contenido */
+    pointer-events: none; /* No bloquea clics del contenido */
+    filter: grayscale(100%);
+  }
+  @media (max-width: 1399.98px) { /* Se oculta en pantallas medianas/pequeñas */
+    .logo-side { display: none; }
+  }
+</style>
+
+<div class="logo-side">
+  <img src="/img/Logo.jpg" alt="Logo Barbería Studio 90's" style="width:100%;height:auto;">
+</div>
+
+<%
+  // Helper robusto para formatear YYYY-MM-DD venga Date o string
+  function fmtDateYMD(d) {
+    if (!d) return '';
+    try {
+      if (Object.prototype.toString.call(d) === '[object Date]') {
+        const dd = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+        return dd.toISOString().split('T')[0];
+      }
+      const s = String(d);
+      if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0,10);
+      const dt = new Date(s);
+      if (!isNaN(dt)) return new Date(dt.getTime() - dt.getTimezoneOffset() * 60000).toISOString().split('T')[0];
+    } catch {}
+    return '';
+  }
+
+  const isAdminOrBarb = (rol === 'admin' || rol === 'barbero');
+  const isCliente     = (rol === 'cliente');
+%>
+
+<h1 class="mb-4">Clientes</h1>
+
+<!-- Formulario dinámico: Agregar o Editar Cliente -->
+<h4 class="mb-3"><%= clienteEditar ? 'Editar cliente' : 'Agregar cliente' %></h4>
+
+<form
+  action="<%= clienteEditar ? '/clientes/editar/' + clienteEditar.ClienteID : '/clientes/agregar' %>"
+  method="POST"
+  class="mb-4 needs-validation"
+  novalidate
+>
+  <div class="row g-2">
+    <div class="col-md-4">
+      <label class="form-label">Nombre</label>
+      <input
+        type="text" name="Nombre" class="form-control" required
+        maxlength="50"
+        pattern="^[A-Za-zÁÉÍÓÚáéíóúÑñÜü\\s]{2,50}$"
+        title="Solo letras y espacios (2–50)."
+        value="<%= clienteEditar ? clienteEditar.Nombre : '' %>">
+      <div class="invalid-feedback">Use solo letras y espacios (2–50).</div>
+    </div>
+
+    <div class="col-md-4">
+      <label class="form-label">Primer apellido</label>
+      <input
+        type="text" name="Apellido1" class="form-control" required
+        maxlength="50"
+        pattern="^[A-Za-zÁÉÍÓÚáéíóúÑñÜü\\s]{2,50}$"
+        title="Solo letras y espacios (2–50)."
+        value="<%= clienteEditar ? clienteEditar.Apellido1 : '' %>">
+      <div class="invalid-feedback">Use solo letras y espacios (2–50).</div>
+    </div>
+
+    <div class="col-md-4">
+      <label class="form-label">Segundo apellido</label>
+      <input
+        type="text" name="Apellido2" class="form-control"
+        maxlength="50"
+        pattern="^[A-Za-zÁÉÍÓÚáéíóúÑñÜü\\s]{0,50}$"
+        title="Solo letras y espacios."
+        value="<%= clienteEditar ? (clienteEditar.Apellido2 || '') : '' %>">
+      <div class="invalid-feedback">Use solo letras y espacios.</div>
+    </div>
+  </div>
+
+  <div class="row g-2 mt-1">
+    <div class="col-md-4">
+      <label class="form-label">Teléfono</label>
+      <input
+        type="text" name="Telefono" class="form-control" required
+        pattern="^[0-9()+\\-\\s]{7,20}$"
+        title="Entre 7 y 20 caracteres numéricos (puede incluir +, -, espacios y paréntesis)."
+        value="<%= clienteEditar ? (clienteEditar.Telefono || '') : '' %>">
+      <div class="invalid-feedback">Teléfono inválido (7–20, permite + - ( ) y espacios).</div>
+    </div>
+
+    <div class="col-md-4">
+      <label class="form-label">Correo</label>
+      <input
+        type="email" name="CorreoElectronico" class="form-control" required
+        maxlength="320"
+        value="<%= clienteEditar ? (clienteEditar.CorreoElectronico || '') : '' %>">
+      <div class="invalid-feedback">Ingrese un correo válido.</div>
+    </div>
+
+    <div class="col-md-4">
+      <label class="form-label">Fecha de nacimiento</label>
+      <input
+        type="date" name="FechaNacimiento" class="form-control" required
+        value="<%= clienteEditar ? fmtDateYMD(clienteEditar.FechaNacimiento) : '' %>">
+      <div class="invalid-feedback">Seleccione la fecha.</div>
+    </div>
+  </div>
+
+  <div class="row g-2 mt-1">
+    <div class="col-md-8">
+      <label class="form-label">Dirección</label>
+      <input
+        type="text" name="Direccion" class="form-control" required
+        maxlength="100"
+        value="<%= clienteEditar ? (clienteEditar.Direccion || '') : '' %>">
+      <div class="invalid-feedback">Ingrese la dirección.</div>
+    </div>
+
+    <% if (isAdminOrBarb) { %>
+      <div class="col-md-4">
+        <label class="form-label">Estado</label>
+        <select name="Estado" class="form-select" required>
+          <option value="A" <%= (clienteEditar && clienteEditar.Estado === 'A') ? 'selected' : '' %>>Activo</option>
+          <option value="I" <%= (clienteEditar && clienteEditar.Estado === 'I') ? 'selected' : '' %>>Inactivo</option>
+        </select>
+        <div class="invalid-feedback">Seleccione el estado.</div>
+      </div>
+    <% } %>
+  </div>
+
+  <div class="text-end mt-3">
+    <button type="submit" class="btn <%= clienteEditar ? 'btn-primary' : 'btn-success' %>">
+      <%= clienteEditar ? 'Guardar cambios' : 'Registrar cliente' %>
+    </button>
+    <% if (clienteEditar) { %>
+      <a href="/clientes" class="btn btn-secondary">Cancelar</a>
+    <% } %>
+  </div>
+</form>
+
+<!-- Tabla de clientes -->
+<table class="table table-striped table-bordered">
+  <thead class="table-dark">
+    <tr>
+      <th>Nombre</th>
+      <th>Apellidos</th>
+      <th>Correo</th>
+      <th>Teléfono</th>
+      <% if (isAdminOrBarb) { %><th>Estado</th><% } %>
+      <th>Acciones</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% (clientes || []).forEach(cliente => { %>
+      <tr>
+        <td><%= cliente.Nombre %></td>
+        <td><%= (cliente.Apellido1 || '') %> <%= (cliente.Apellido2 || '') %></td>
+        <td><%= cliente.CorreoElectronico %></td>
+        <td><%= cliente.Telefono %></td>
+        <% if (isAdminOrBarb) { %>
+          <td>
+            <span class="badge <%= cliente.Estado === 'A' ? 'bg-success' : 'bg-secondary' %>">
+              <%= cliente.Estado === 'A' ? 'Activo' : 'Inactivo' %>
+            </span>
+          </td>
+        <% } %>
+        <td>
+          <a href="/clientes/editar/<%= cliente.ClienteID %>" class="btn btn-sm btn-primary">Editar</a>
+          <% if (!isCliente) { %>
+            <form action="/clientes/eliminar/<%= cliente.ClienteID %>" method="POST" class="d-inline"
+                  onsubmit="return confirm('¿Eliminar este cliente?')">
+              <button type="submit" class="btn btn-sm btn-danger">Eliminar</button>
+            </form>
+          <% } %>
+        </td>
+      </tr>
+    <% }) %>
+  </tbody>
+</table>
+
+<script>
+  // Bootstrap validation
+  (function () {
+    const form = document.querySelector('form.needs-validation');
+    if (!form) return;
+    form.addEventListener('submit', function (ev) {
+      if (!form.checkValidity()) {
+        ev.preventDefault();
+        ev.stopPropagation();
+      }
+      form.classList.add('was-validated');
+    }, false);
+  })();
+</script>
+
+<%- include('partials/footer') %>
+
+
+
+
+

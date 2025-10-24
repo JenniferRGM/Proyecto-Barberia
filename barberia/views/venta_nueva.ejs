@@ -1,0 +1,255 @@
+<%- include('partials/header', { titulo: 'Nueva venta' }) %>
+
+<h2 class="mb-3">Nueva venta</h2>
+
+<form action="/ventas/nueva" method="POST" id="form-venta">
+  <div class="row g-3 mb-3">
+    <div class="col-md-6">
+      <label class="form-label">Cliente</label>
+      <select name="ClienteID" class="form-select" required>
+        <option value="">Seleccione…</option>
+        <% clientes.forEach(c => { %>
+          <option value="<%= c.ClienteID %>"><%= c.Nombre %> <%= c.Apellido1 %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Fecha</label>
+      <input type="date" class="form-control" value="<%= new Date().toISOString().split('T')[0] %>" disabled>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Total</label>
+      <input type="text" id="total" class="form-control" value="₡0.00" readonly>
+    </div>
+  </div>
+
+  <div class="d-flex justify-content-between align-items-center mb-2">
+    <h5 class="m-0">Detalle</h5>
+    <button type="button" class="btn btn-outline-primary btn-sm" id="btn-add-linea">Agregar línea</button>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-bordered align-middle" id="tabla-detalle">
+      <thead class="table-dark">
+        <tr>
+          <th>Tipo</th>
+          <th>Servicio / Producto</th>
+          <th class="text-end" style="width:120px">Cantidad</th>
+          <th class="text-end" style="width:160px">Precio</th>
+          <th class="text-end" style="width:140px">Subtotal</th>
+          <th style="width:60px"></th>
+        </tr>
+      </thead>
+      <tbody><!-- filas dinámicas --></tbody>
+    </table>
+  </div>
+
+  <div class="text-end">
+    <button class="btn btn-success">Guardar venta</button>
+    <a href="/ventas" class="btn btn-secondary">Cancelar</a>
+  </div>
+</form>
+
+<script>
+  const servicios = <%- JSON.stringify(servicios || []) %>;
+  const productos = <%- JSON.stringify(productos || []) %>; // Debe incluir StockActual
+  const tbody = document.querySelector('#tabla-detalle tbody');
+  const btnAdd = document.getElementById('btn-add-linea');
+  const totalEl = document.getElementById('total');
+
+  // vienen desde el render del servidor (routes/ventas.js)
+  const selProducto = <%- JSON.stringify(typeof selProducto !== 'undefined' ? selProducto : null) %>;
+  const selServicio = <%- JSON.stringify(typeof selServicio !== 'undefined' ? selServicio : null) %>;
+
+  function fmt(n){ return '₡' + Number(n||0).toFixed(2); }
+  function calcTotal(){
+    let t = 0;
+    tbody.querySelectorAll('tr').forEach(tr=>{
+      t += Number(tr.querySelector('.inp-subtotal')?.value || 0);
+    });
+    totalEl.value = fmt(t);
+  }
+
+  function buildSelectTipo(i, valorInicial='producto'){
+    const s = document.createElement('select');
+    s.name = `lineas[${i}][tipo]`;
+    s.className = 'form-select sel-tipo';
+    s.innerHTML = `
+      <option value="servicio" ${valorInicial==='servicio'?'selected':''}>Servicio</option>
+      <option value="producto" ${valorInicial==='producto'?'selected':''}>Producto</option>
+    `;
+    return s;
+  }
+
+  function buildSelectItem(i, tipo){
+    const s = document.createElement('select');
+    s.name = `lineas[${i}][id]`;
+    s.className = 'form-select sel-item';
+
+    const data = (tipo === 'producto') ? (productos || []) : (servicios || []);
+    if (!Array.isArray(data) || data.length === 0) {
+      s.innerHTML = `<option value="">No hay ${tipo==='producto'?'productos':'servicios'} disponibles</option>`;
+      s.disabled = true;
+      return s;
+    }
+
+    const opts = ['<option value="">Seleccione…</option>'].concat(
+      data.map(x => {
+        const id   = (tipo==='producto') ? x.ProductoID : x.ServicioID;
+        const nom  = x.Nombre || '';
+        const prec = Number((x.Precio ?? x.PrecioVenta) || 0);
+        const extra= x.DuracionMinutos ? ` (${x.DuracionMinutos} min)` : '';
+        if (tipo === 'producto') {
+          const stock = Number(x.StockActual ?? 0);
+          const disabled = stock <= 0 ? 'disabled' : '';
+          const etiqueta = `${nom} — ${fmt(prec)} — stock: ${stock}`;
+          return `<option value="${id}" data-precio="${prec}" data-stock="${stock}" ${disabled}>${etiqueta}</option>`;
+        } else {
+          return `<option value="${id}" data-precio="${prec}">${nom}${extra}</option>`;
+        }
+      })
+    );
+    s.innerHTML = opts.join('');
+    s.disabled = false;
+    return s;
+  }
+
+  function addLinea(tipoInicial='producto'){
+    const i = tbody.children.length;
+    const tr = document.createElement('tr');
+
+    const tdTipo = document.createElement('td');
+    const tdItem = document.createElement('td');
+    const tdCant = document.createElement('td');
+    const tdPrecio = document.createElement('td');
+    const tdSub = document.createElement('td');
+    const tdAcc = document.createElement('td');
+
+    tdCant.className = 'text-end';
+    tdPrecio.className = 'text-end';
+    tdSub.className = 'text-end';
+
+    const selTipo = buildSelectTipo(i, tipoInicial);
+    tdTipo.appendChild(selTipo);
+
+    let selItem = buildSelectItem(i, selTipo.value);
+    tdItem.appendChild(selItem);
+
+    const inpCant = document.createElement('input');
+    inpCant.type = 'number'; inpCant.min = '1'; inpCant.value = '1';
+    inpCant.name = `lineas[${i}][cantidad]`;
+    inpCant.className = 'form-control text-end inp-cant';
+    tdCant.appendChild(inpCant);
+
+    const inpPrecio = document.createElement('input');
+    inpPrecio.type = 'number'; inpPrecio.step = '0.01'; inpPrecio.min = '0'; inpPrecio.value = '0';
+    inpPrecio.name = `lineas[${i}][precio]`;
+    inpPrecio.className = 'form-control text-end inp-precio';
+    tdPrecio.appendChild(inpPrecio);
+
+    const inpSub = document.createElement('input');
+    inpSub.type = 'hidden';
+    inpSub.name = `lineas[${i}][subtotal]`;
+    inpSub.className = 'inp-subtotal';
+    const spanSub = document.createElement('span');
+    spanSub.textContent = fmt(0);
+    tdSub.appendChild(spanSub); tdSub.appendChild(inpSub);
+
+    const btnDel = document.createElement('button');
+    btnDel.type = 'button'; btnDel.className = 'btn btn-outline-danger btn-sm';
+    btnDel.textContent = '×';
+    tdAcc.appendChild(btnDel);
+
+    tr.append(tdTipo, tdItem, tdCant, tdPrecio, tdSub, tdAcc);
+    tbody.appendChild(tr);
+
+    function getSelectedStock(){
+      const opt = selItem.selectedOptions[0];
+      return Number(opt?.dataset?.stock ?? Infinity);
+    }
+
+    function calc(){
+      if (selTipo.value === 'producto') {
+        const max = getSelectedStock();
+        if (isFinite(max)) {
+          if (!inpCant.max || Number(inpCant.max) !== max) inpCant.max = max;
+          if (Number(inpCant.value) > max) inpCant.value = String(max);
+        }
+      } else {
+        inpCant.removeAttribute('max');
+      }
+      const cant = Number(inpCant.value||1);
+      const pre  = Number(inpPrecio.value||0);
+      const sub  = cant * pre;
+      inpSub.value = sub;
+      spanSub.textContent = fmt(sub);
+      calcTotal();
+    }
+
+    selTipo.addEventListener('change', () => {
+      tdItem.innerHTML = '';
+      selItem = buildSelectItem(i, selTipo.value);
+      tdItem.appendChild(selItem);
+      inpPrecio.value = '0';
+      inpCant.value = '1';
+      calc();
+      selItem.addEventListener('change', () => {
+        const p = Number(selItem.selectedOptions[0]?.dataset?.precio || 0);
+        inpPrecio.value = p;
+        calc();
+      });
+    });
+
+    selItem.addEventListener('change', () => {
+      const p = Number(selItem.selectedOptions[0]?.dataset?.precio || 0);
+      inpPrecio.value = p;
+      calc();
+    });
+
+    inpCant.addEventListener('input', calc);
+    inpPrecio.addEventListener('input', calc);
+    btnDel.addEventListener('click', () => { tr.remove(); calcTotal(); });
+
+    calc();
+  }
+
+  // ------- Inicialización con preselección desde ?producto / ?servicio -------
+  (function initPrimeraLinea() {
+    const existeProd = selProducto && productos.some(p => p.ProductoID === selProducto && Number(p.StockActual) > 0);
+    const existeServ = selServicio && servicios.some(s => s.ServicioID === selServicio);
+
+    if (existeProd) {
+      addLinea('producto');
+      const tr = tbody.lastElementChild;
+      const selTipo = tr.querySelector('.sel-tipo');
+      selTipo.value = 'producto';
+      selTipo.dispatchEvent(new Event('change'));
+      setTimeout(() => {
+        const selItem = tr.querySelector('.sel-item');
+        if (selItem) {
+          selItem.value = selProducto;
+          selItem.dispatchEvent(new Event('change'));
+        }
+      }, 0);
+    } else if (existeServ) {
+      addLinea('servicio');
+      const tr = tbody.lastElementChild;
+      const selTipo = tr.querySelector('.sel-tipo');
+      selTipo.value = 'servicio';
+      selTipo.dispatchEvent(new Event('change'));
+      setTimeout(() => {
+        const selItem = tr.querySelector('.sel-item');
+        if (selItem) {
+          selItem.value = selServicio;
+          selItem.dispatchEvent(new Event('change'));
+        }
+      }, 0);
+    } else {
+      addLinea('producto'); // comportamiento por defecto
+    }
+  })();
+
+  // Botón para añadir más líneas
+  btnAdd.addEventListener('click', () => addLinea('producto'));
+</script>
+<%- include('partials/footer') %>

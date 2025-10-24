@@ -1,0 +1,193 @@
+<%- include('partials/header', { titulo: 'Registrarse', hideNav: true }) %>
+<!-- Logo lateral (solo pantallas grandes) -->
+<style>
+  .logo-side {
+    position: fixed;
+    left: 10px;           /* Ajusta la distancia al borde izquierdo */
+    top: 96px;            /* Ajusta para que no tape la navbar */
+    width: 260px;         /* Tamaño del logo */
+    opacity: .10;         /* Transparencia para que no moleste */
+    z-index: 0;           /* Debajo del contenido */
+    pointer-events: none; /* No bloquea clics del contenido */
+    filter: grayscale(100%);
+  }
+  @media (max-width: 1399.98px) { /* Se oculta en pantallas medianas/pequeñas */
+    .logo-side { display: none; }
+  }
+</style>
+
+<div class="logo-side">
+  <img src="/img/Logo.jpg" alt="Logo Barbería Studio 90's" style="width:100%;height:auto;">
+</div>
+
+<% const v = (typeof values !== 'undefined' && values) ? values : {}; %>
+
+<style>
+  .reg-bg { background: linear-gradient(180deg,#f7fbff, #ffffff 30%, #f5f6f8); }
+  .reg-card { border:0; border-radius:1rem; box-shadow:0 20px 40px rgba(0,0,0,.08); }
+  .brand-circle { width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#19875410;color:#198754;font-size:28px;margin:0 auto 12px; }
+  .pw-meter { height:6px; border-radius:999px; background:#e9ecef; overflow:hidden; }
+  .pw-meter > div { height:100%; width:0%; transition:width .3s ease; }
+</style>
+
+<div class="reg-bg min-vh-100 d-flex align-items-center">
+  <div class="container py-4">
+    <div class="row justify-content-center">
+      <div class="col-11 col-lg-8">
+        <div class="card reg-card p-3 p-md-4">
+          <div class="text-center mb-3">
+            <div class="brand-circle">📝</div>
+            <h3 class="mb-0">Crear cuenta</h3>
+            <p class="text-muted">Completa tus datos para registrarte</p>
+          </div>
+
+          <% if (typeof error !== 'undefined' && error) { %>
+            <div class="alert alert-danger"><%= error %></div>
+          <% } %>
+          <% if (typeof success !== 'undefined' && success) { %>
+            <div class="alert alert-success"><%= success %></div>
+          <% } %>
+
+          <form action="/registro" method="POST" id="registroForm">
+            <!-- Datos de acceso -->
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label">Nombre de usuario</label>
+                <input type="text" class="form-control" name="nombreUsuario"
+                       maxlength="30" required
+                       value="<%= v.nombreUsuario || '' %>">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Correo electrónico</label>
+                <input type="email" class="form-control" name="correo"
+                       maxlength="320" required
+                       value="<%= v.correo || '' %>">
+              </div>
+
+              <div class="col-md-8">
+                <label class="form-label">Contraseña</label>
+                <div class="input-group">
+                  <input type="password" class="form-control" id="contrasena"
+                         name="contrasena" minlength="8" required>
+                  <button class="btn btn-outline-secondary" type="button" id="togglePass">👁</button>
+                </div>
+                <div class="pw-meter mt-2"><div id="pwBar"></div></div>
+                <small class="text-muted">Mínimo 8 caracteres. Usa mayúsculas, minúsculas, números y símbolos.</small>
+              </div>
+
+              <div class="col-md-4">
+                <label class="form-label">Rol</label>
+                <select class="form-select" id="rolSelect" name="rol" required>
+                  <option value="">Seleccione…</option>
+                  <option value="cliente" <%= v.rol==='cliente' ? 'selected' : '' %>>Cliente</option>
+                  <option value="barbero" <%= v.rol==='barbero' ? 'selected' : '' %>>Barbero</option>
+                  <option value="admin"   <%= v.rol==='admin'   ? 'selected' : '' %>>Administrador</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Datos personales (cliente/barbero) -->
+            <div id="camposExtras" class="mt-4" style="display:none;">
+              <h6 class="text-muted mb-3">Datos personales</h6>
+              <div class="row g-3">
+                <div class="col-md-4">
+                  <label class="form-label">Nombre</label>
+                  <input type="text" class="form-control" name="nombre"
+                         value="<%= v.nombre || '' %>" data-extra>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Primer apellido</label>
+                  <input type="text" class="form-control" name="apellido1"
+                         value="<%= v.apellido1 || '' %>" data-extra>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Segundo apellido</label>
+                  <input type="text" class="form-control" name="apellido2"
+                         value="<%= v.apellido2 || '' %>">
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Teléfono</label>
+                  <input type="text" class="form-control" name="telefono"
+                         pattern="^[0-9()+\\-\\s]{7,20}$"
+                         title="Entre 7 y 20 caracteres numéricos (puede incluir +, -, espacios y paréntesis)"
+                         value="<%= v.telefono || '' %>" data-extra>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Fecha de nacimiento</label>
+                  <input type="date" class="form-control" name="fechaNacimiento"
+                         value="<%= v.fechaNacimiento || '' %>">
+                </div>
+                <div class="col-md-4" id="direccionCliente" style="display:none;">
+                  <label class="form-label">Dirección</label>
+                  <input type="text" class="form-control" name="direccion"
+                         value="<%= v.direccion || '' %>">
+                </div>
+              </div>
+            </div>
+
+            <div class="d-flex gap-2 mt-4">
+              <button class="btn btn-success" id="btnSubmit">
+                <span class="spinner-border spinner-border-sm me-2 d-none" id="btnSpinner"></span>
+                Crear cuenta
+              </button>
+              <a href="/login" class="btn btn-outline-secondary">Ir a iniciar sesión</a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Mostrar/ocultar contraseña
+  document.getElementById('togglePass').addEventListener('click', () => {
+    const input = document.getElementById('contrasena');
+    input.type = input.type === 'password' ? 'text' : 'password';
+  });
+
+  // Rol: mostrar campos extra y poner/quitar 'required' en los necesarios
+  const rolSelect = document.getElementById('rolSelect');
+  const camposExtras = document.getElementById('camposExtras');
+  const direccionCliente = document.getElementById('direccionCliente');
+
+  function refrescarExtras() {
+    const rol = rolSelect.value;
+    const mostrar = (rol === 'cliente' || rol === 'barbero');
+    camposExtras.style.display = mostrar ? 'block' : 'none';
+    direccionCliente.style.display = (rol === 'cliente') ? 'block' : 'none';
+
+    // nombre, apellido1 y teléfono obligatorios para cliente/barbero
+    document.querySelectorAll('[data-extra]').forEach(el => {
+      el.required = mostrar;
+    });
+  }
+  rolSelect.addEventListener('change', refrescarExtras);
+  // Estado inicial según valor del servidor
+  refrescarExtras();
+
+  // Indicador de fuerza de contraseña (simple)
+  const pw = document.getElementById('contrasena');
+  const bar = document.getElementById('pwBar');
+  pw.addEventListener('input', () => {
+    const v = pw.value || '';
+    let score = 0;
+    if (v.length >= 8) score++;
+    if (/[A-Z]/.test(v)) score++;
+    if (/[a-z]/.test(v)) score++;
+    if (/\d/.test(v)) score++;
+    if (/[^A-Za-z0-9]/.test(v)) score++;
+    const pct = Math.min(100, score * 20);
+    bar.style.width = pct + '%';
+    bar.style.background = pct < 40 ? '#dc3545' : (pct < 80 ? '#ffc107' : '#198754');
+  });
+
+  // Spinner al enviar
+  document.getElementById('registroForm').addEventListener('submit', () => {
+    document.getElementById('btnSubmit').setAttribute('disabled','disabled');
+    document.getElementById('btnSpinner').classList.remove('d-none');
+  });
+</script>
+
+<%- include('partials/footer') %>
+
