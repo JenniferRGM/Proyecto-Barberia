@@ -1,0 +1,281 @@
+<%- include('partials/header', { titulo: 'Barberos'}) %>
+<!-- Logo lateral (solo pantallas grandes) -->
+<style>
+  .logo-side {
+    position: fixed;
+    left: 10px;           /* Ajusta la distancia al borde izquierdo */
+    top: 96px;            /* Ajusta para que no tape la navbar */
+    width: 260px;         /* Tamaño del logo */
+    opacity: .10;         /* Transparencia para que no moleste */
+    z-index: 0;           /* Debajo del contenido */
+    pointer-events: none; /* No bloquea clics del contenido */
+    filter: grayscale(100%);
+  }
+  @media (max-width: 1399.98px) { /* Se oculta en pantallas medianas/pequeñas */
+    .logo-side { display: none; }
+  }
+</style>
+
+<div class="logo-side">
+  <img src="/img/Logo.jpg" alt="Logo Barbería Studio 90's" style="width:100%;height:auto;">
+</div>
+
+<%
+  // === Helpers ===
+  function fmtDateYMD(d) {
+    if (!d) return '';
+    try {
+      if (Object.prototype.toString.call(d) === '[object Date]') {
+        const dd = new Date(d.getTime() - d.getTimezoneOffset()*60000);
+        return dd.toISOString().split('T')[0];
+      }
+      const s = String(d);
+      if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0,10);
+      const dt = new Date(s);
+      if (!isNaN(dt)) return new Date(dt.getTime() - dt.getTimezoneOffset()*60000).toISOString().split('T')[0];
+    } catch {}
+    return '';
+  }
+
+  const isAdmin  = (rol === 'admin');
+  const isBarber = (rol === 'barbero');
+  const yoBarberoId = (typeof miBarberoId !== 'undefined' && miBarberoId) ? miBarberoId : null;
+%>
+
+<div class="container py-4">
+  <h1 class="mb-4">Barberos</h1>
+
+  <% if (error) { %><div class="alert alert-danger"><%= error %></div><% } %>
+  <% if (success) { %><div id="msg-ok" class="alert alert-success"><%= success %></div><% } %>
+
+  <script>
+    (function(){
+      const el = document.getElementById('msg-ok');
+      if(!el) return;
+      setTimeout(()=>{ el.style.transition='opacity .5s'; el.style.opacity='0'; setTimeout(()=>el.remove(), 600);}, 3000);
+    })();
+  </script>
+
+  <!-- Form Agregar: SOLO ADMIN -->
+  <% if (isAdmin) { %>
+  <div class="card mb-4">
+    <div class="card-header">Agregar barbero</div>
+    <div class="card-body">
+      <form action="/barberos/agregar" method="POST" class="row g-3 needs-validation" novalidate>
+        <div class="col-md-4">
+          <label class="form-label">Nombre</label>
+          <input class="form-control" name="Nombre" required maxlength="50"
+                 pattern="^[A-Za-zÁÉÍÓÚáéíóúÑñÜü\\s]{2,50}$" title="Solo letras y espacios (2–50).">
+          <div class="invalid-feedback">Use solo letras y espacios (2–50).</div>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Primer apellido</label>
+          <input class="form-control" name="Apellido1" required maxlength="50"
+                 pattern="^[A-Za-zÁÉÍÓÚáéíóúÑñÜü\\s]{2,50}$" title="Solo letras y espacios (2–50).">
+          <div class="invalid-feedback">Use solo letras y espacios (2–50).</div>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Segundo apellido</label>
+          <input class="form-control" name="Apellido2" maxlength="50"
+                 pattern="^[A-Za-zÁÉÍÓÚáéíóúÑñÜü\\s]{0,50}$" title="Solo letras y espacios.">
+          <div class="invalid-feedback">Solo letras y espacios.</div>
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label">Correo</label>
+          <input class="form-control" name="CorreoElectronico" type="email" maxlength="320" required>
+          <div class="invalid-feedback">Ingrese un correo válido.</div>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Teléfono</label>
+          <input class="form-control" name="Telefono" required
+                 pattern="^[0-9()+\\-\\s]{7,20}$"
+                 title="Entre 7 y 20 caracteres numéricos (se permiten + - ( ) y espacios).">
+          <div class="invalid-feedback">Teléfono inválido.</div>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Fecha nacimiento</label>
+          <input class="form-control" name="FechaNacimiento" type="date" required>
+          <div class="invalid-feedback">Seleccione la fecha.</div>
+        </div>
+        <div class="col-12 text-end">
+          <button class="btn btn-success">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  <% } %>
+
+  <!-- Tabla -->
+  <div class="table-responsive">
+    <table class="table table-bordered table-striped align-middle">
+      <thead class="table-dark">
+        <tr>
+          <th>ID</th>
+          <th>Nombre</th>
+          <th>Correo</th>
+          <th>Teléfono</th>
+          <th>Fecha Contratación</th>
+          <th>Estado</th>
+          <th class="text-center" style="width:220px">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% (barberos || []).forEach(b => {
+             const soyYo = (yoBarberoId && yoBarberoId === b.BarberoID);
+        %>
+          <tr>
+            <td><%= b.BarberoID %></td>
+            <td><%= b.Nombre %> <%= b.Apellido1 %> <%= b.Apellido2 || '' %></td>
+            <td><%= b.CorreoElectronico || '' %></td>
+            <td><%= b.Telefono || '' %></td>
+            <td><%= fmtDateYMD(b.FechaContratacion) %></td>
+            <td>
+              <span class="badge <%= b.Estado === 'A' ? 'bg-success' : 'bg-danger' %>">
+                <%= b.Estado === 'A' ? 'Activo' : 'Inactivo' %>
+              </span>
+            </td>
+            <td class="text-center">
+              <!-- Editar: admin siempre; barbero solo si es su propio registro -->
+              <% if (isAdmin || (isBarber && soyYo)) { %>
+                <button class="btn btn-sm btn-primary"
+                  data-bs-toggle="modal" data-bs-target="#modalEditar"
+                  data-id="<%= b.BarberoID %>"
+                  data-nombre="<%= b.Nombre %>"
+                  data-ap1="<%= b.Apellido1 %>"
+                  data-ap2="<%= b.Apellido2 || '' %>"
+                  data-mail="<%= b.CorreoElectronico || '' %>"
+                  data-tel="<%= b.Telefono || '' %>"
+                  data-nac="<%= fmtDateYMD(b.FechaNacimiento) %>"
+                  data-estado="<%= b.Estado %>">
+                  Editar
+                </button>
+              <% } %>
+
+              <!-- Especialidades: admin siempre; barbero solo si es su propio registro -->
+              <% if (isAdmin || (isBarber && soyYo)) { %>
+                <a class="btn btn-sm btn-warning ms-1"
+                   href="/especialidades/barbero/<%= b.BarberoID %>">
+                  Especialidades
+                </a>
+              <% } %>
+
+              <!-- Eliminar: solo admin -->
+              <% if (isAdmin) { %>
+                <form action="/barberos/eliminar/<%= b.BarberoID %>" method="POST" class="d-inline"
+                      onsubmit="return confirm('¿Eliminar al barbero <%= b.Nombre %>?')">
+                  <button class="btn btn-sm btn-danger ms-1">Eliminar</button>
+                </form>
+              <% } %>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal Editar -->
+<div class="modal fade" id="modalEditar" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form id="formEditar" method="POST" class="needs-validation" novalidate>
+        <div class="modal-header">
+          <h5 class="modal-title">Editar barbero</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Nombre</label>
+            <input class="form-control" name="Nombre" required maxlength="50"
+                   pattern="^[A-Za-zÁÉÍÓÚáéíóúÑñÜü\\s]{2,50}$" title="Solo letras y espacios (2–50).">
+            <div class="invalid-feedback">Use solo letras y espacios (2–50).</div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Primer apellido</label>
+            <input class="form-control" name="Apellido1" required maxlength="50"
+                   pattern="^[A-Za-zÁÉÍÓÚáéíóúÑñÜü\\s]{2,50}$" title="Solo letras y espacios (2–50).">
+            <div class="invalid-feedback">Use solo letras y espacios (2–50).</div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Segundo apellido</label>
+            <input class="form-control" name="Apellido2" maxlength="50"
+                   pattern="^[A-Za-zÁÉÍÓÚáéíóúÑñÜü\\s]{0,50}$" title="Solo letras y espacios.">
+            <div class="invalid-feedback">Solo letras y espacios.</div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Correo</label>
+            <input class="form-control" name="CorreoElectronico" type="email" maxlength="320" required>
+            <div class="invalid-feedback">Correo inválido.</div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Teléfono</label>
+            <input class="form-control" name="Telefono" required
+                   pattern="^[0-9()+\\-\\s]{7,20}$"
+                   title="Entre 7 y 20 caracteres numéricos (se permiten + - ( ) y espacios).">
+            <div class="invalid-feedback">Teléfono inválido.</div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Fecha nacimiento</label>
+            <input class="form-control" name="FechaNacimiento" type="date" required>
+            <div class="invalid-feedback">Seleccione la fecha.</div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Estado</label>
+            <select class="form-select" name="Estado" required>
+              <option value="A">Activo</option>
+              <option value="I">Inactivo</option>
+            </select>
+            <div class="invalid-feedback">Seleccione el estado.</div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-secondary" data-bs-dismiss="modal" type="button">Cancelar</button>
+          <button class="btn btn-primary">Guardar cambios</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Cargar datos en el modal al abrirlo
+  const modal = document.getElementById('modalEditar');
+  if (modal) {
+    modal.addEventListener('show.bs.modal', e => {
+      const btn = e.relatedTarget;
+      const id  = btn?.dataset?.id;
+      const f   = modal.querySelector('form');
+
+      if (!id || !f) return;
+      f.action = `/barberos/editar/${id}`;
+      f.Nombre.value = btn.dataset.nombre || '';
+      f.Apellido1.value = btn.dataset.ap1 || '';
+      f.Apellido2.value = btn.dataset.ap2 || '';
+      f.CorreoElectronico.value = btn.dataset.mail || '';
+      f.Telefono.value = btn.dataset.tel || '';
+      f.FechaNacimiento.value = btn.dataset.nac || '';
+      f.Estado.value = btn.dataset.estado || 'A';
+    });
+  }
+
+  // Bootstrap validation para formularios
+  (function () {
+    document.querySelectorAll('form.needs-validation').forEach(form=>{
+      form.addEventListener('submit', function (ev) {
+        if (!form.checkValidity()) {
+          ev.preventDefault();
+          ev.stopPropagation();
+        }
+        form.classList.add('was-validated');
+      }, false);
+    });
+  })();
+</script>
+
+<%- include('partials/footer') %>
+
+
+

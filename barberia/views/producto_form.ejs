@@ -1,0 +1,97 @@
+<%- include('partials/header', { titulo: (prod ? 'Editar' : 'Nuevo') + ' producto' }) %>
+
+<h2 class="mb-3"><%= prod ? 'Editar' : 'Nuevo' %> producto</h2>
+
+<form
+  method="POST"
+  action="<%= prod ? '/productos/editar/' + prod.ProductoID : '/productos/nuevo' %>"
+  class="row g-3"
+  enctype="multipart/form-data"   <!-- IMPORTANTE para subir imagen -->
+>
+  <div class="col-md-6">
+    <label class="form-label">Nombre</label>
+    <input type="text" name="Nombre" class="form-control" maxlength="50" required
+           value="<%= prod ? prod.Nombre : '' %>">
+  </div>
+
+  <div class="col-md-6">
+    <label class="form-label">Marca</label>
+    <input type="text" name="Marca" class="form-control" maxlength="30" required
+           value="<%= prod ? prod.Marca : '' %>">
+  </div>
+
+  <div class="col-md-12">
+    <label class="form-label">Descripción</label>
+    <input type="text" name="Descripcion" class="form-control" maxlength="100" required
+           value="<%= prod ? prod.Descripcion : '' %>">
+  </div>
+
+  <div class="col-md-4">
+    <label class="form-label">Precio venta</label>
+    <input type="number" step="0.01" min="0" name="PrecioVenta" class="form-control" required
+           value="<%= prod ? Number(prod.PrecioVenta) : 0 %>">
+  </div>
+
+  <div class="col-md-4">
+    <label class="form-label">Costo</label>
+    <input type="number" step="0.01" min="0" name="Costo" class="form-control" required
+           value="<%= prod ? Number(prod.Costo) : 0 %>">
+  </div>
+
+  <div class="col-md-4">
+    <label class="form-label">Stock mínimo</label>
+    <input type="number" step="1" min="0" name="StockMinimo" class="form-control" required
+           value="<%= prod ? Number(prod.StockMinimo) : 0 %>">
+  </div>
+
+  <div class="col-md-4">
+    <label class="form-label">Stock actual</label>
+    <input type="number" step="1" min="0" name="StockActual" class="form-control" required
+           value="<%= prod ? Number(prod.StockActual) : 0 %>">
+  </div>
+
+  <div class="col-md-4">
+    <label class="form-label">Fecha entrada</label>
+    <input type="date" name="FechaEntrada" class="form-control"
+           value="<%= prod && prod.FechaEntrada ? new Date(prod.FechaEntrada).toISOString().split('T')[0] : new Date().toISOString().split('T')[0] %>">
+  </div>
+
+  <div class="col-md-4">
+    <label class="form-label">Fecha salida (opcional)</label>
+    <input type="date" name="FechaSalida" class="form-control"
+           value="<%= prod && prod.FechaSalida ? new Date(prod.FechaSalida).toISOString().split('T')[0] : '' %>">
+  </div>
+
+  <!-- Imagen -->
+  <div class="col-md-6">
+    <label class="form-label">Imagen (JPG/PNG/WEBP/GIF, máx. 3MB)</label>
+    <input type="file" name="Imagen" id="inpImg" class="form-control" accept="image/*">
+    <% if (prod && prod.Imagen) { %>
+      <small class="text-muted d-block mt-1">Actual: <code><%= prod.Imagen %></code></small>
+      <img src="<%= prod.Imagen %>" alt="Imagen actual" class="mt-2 rounded" style="max-width:240px;height:auto;">
+    <% } %>
+    <img id="preview" class="mt-2 rounded d-none" style="max-width:240px;height:auto;" alt="Vista previa">
+  </div>
+
+  <div class="col-12 d-flex gap-2">
+    <button class="btn btn-success"><%= prod ? 'Guardar cambios' : 'Crear producto' %></button>
+    <a href="/productos" class="btn btn-secondary">Cancelar</a>
+  </div>
+</form>
+
+<script>
+  // Vista previa de la imagen seleccionada
+  const inp = document.getElementById('inpImg');
+  const preview = document.getElementById('preview');
+  if (inp) {
+    inp.addEventListener('change', () => {
+      const f = inp.files?.[0];
+      if (!f) { preview.classList.add('d-none'); return; }
+      const url = URL.createObjectURL(f);
+      preview.src = url;
+      preview.classList.remove('d-none');
+    });
+  }
+</script>
+
+<%- include('partials/footer') %>

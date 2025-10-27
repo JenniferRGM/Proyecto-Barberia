@@ -1,0 +1,302 @@
+<%- include('partials/header', { titulo: titulo || 'Reportes' }) %>
+<!-- Logo lateral (solo pantallas grandes) -->
+<style>
+  .logo-side {
+    position: fixed;
+    left: 10px;           /* Ajusta la distancia al borde izquierdo */
+    top: 96px;            /* Ajusta para que no tape la navbar */
+    width: 260px;         /* Tamaño del logo */
+    opacity: .10;         /* Transparencia para que no moleste */
+    z-index: 0;           /* Debajo del contenido */
+    pointer-events: none; /* No bloquea clics del contenido */
+    filter: grayscale(100%);
+  }
+  @media (max-width: 1399.98px) { /* Se oculta en pantallas medianas/pequeñas */
+    .logo-side { display: none; }
+  }
+</style>
+
+<div class="logo-side">
+  <img src="/img/Logo.jpg" alt="Logo Barbería Studio 90's" style="width:100%;height:auto;">
+</div>
+
+<link rel="preconnect" href="https://cdn.jsdelivr.net" />
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+  @media print {
+    nav, header, footer, .no-print { display:none !important; }
+    .btn, .form-select, .form-control, .input-group, .alert { display:none !important; }
+    .card { box-shadow:none !important; border:1px solid #ddd !important; }
+    body, .container { background:#fff !important; max-width:100% !important; }
+    h2 { margin-top:0 }
+  }
+</style>
+
+<div class="container my-4">
+  <h2 class="mb-3">Reportes</h2>
+
+  <!-- Filtros -->
+  <form class="row g-3 align-items-end mb-4 no-print" method="GET" action="/reportes">
+    <div class="col-sm-3">
+      <label class="form-label">Desde</label>
+      <input type="date" name="desde" class="form-control"
+             value="<%= new Date(desde).toISOString().split('T')[0] %>">
+    </div>
+    <div class="col-sm-3">
+      <label class="form-label">Hasta</label>
+      <input type="date" name="hasta" class="form-control"
+             value="<%= new Date(hasta).toISOString().split('T')[0] %>">
+    </div>
+    <div class="col-sm-3">
+      <label class="form-label">Cliente</label>
+      <select class="form-select" name="cliente">
+        <option value="">Todos</option>
+        <% (clientesOpt||[]).forEach(c => { %>
+          <option value="<%= c.ClienteID %>" <%= (clienteSel===c.ClienteID)?'selected':'' %>><%= c.Nombre %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="col-sm-3">
+      <label class="form-label">Barbero (para Citas)</label>
+      <select class="form-select" name="barbero">
+        <option value="">Todos</option>
+        <% (barberosOpt||[]).forEach(b => { %>
+          <option value="<%= b.BarberoID %>" <%= (barberoSel===b.BarberoID)?'selected':'' %>><%= b.Nombre %></option>
+        <% }) %>
+      </select>
+    </div>
+
+    <div class="col-12 d-flex gap-2">
+      <button class="btn btn-primary">Aplicar</button>
+      <a href="/reportes" class="btn btn-outline-secondary">Últimos 30 días</a>
+
+      <!-- Exportes -->
+      <% 
+        const qs = new URLSearchParams({
+          desde: new Date(desde).toISOString().split('T')[0],
+          hasta: new Date(hasta).toISOString().split('T')[0],
+          cliente: clienteSel || '',
+          barbero: barberoSel || ''
+        }).toString();
+      %>
+      <a class="btn btn-success ms-auto" href="/reportes/export/csv?tipo=porDia&<%= qs %>">CSV — Ventas por día</a>
+      <a class="btn btn-success" href="/reportes/export/csv?tipo=detalle&<%= qs %>">CSV — Detalle ventas</a>
+      <a class="btn btn-success" href="/reportes/export/csv?tipo=citas&<%= qs %>">CSV — Citas</a>
+      <button type="button" class="btn btn-dark" onclick="window.print()">Imprimir / PDF</button>
+    </div>
+  </form>
+
+  <!-- KPIs -->
+  <div class="row g-3 mb-4">
+    <div class="col-md-4">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <div class="text-muted small">Ventas</div>
+          <div class="display-6"><%= Number(kpis?.TotalVentas||0) %></div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <div class="text-muted small">Ingresos</div>
+          <div class="display-6">₡ <%= Number(kpis?.MontoTotal||0).toLocaleString() %></div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <div class="text-muted small">Ticket promedio</div>
+          <div class="display-6">₡ <%= Number(kpis?.TicketPromedio||0).toLocaleString() %></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Gráficos -->
+  <div class="row g-4 mb-4">
+    <div class="col-lg-6">
+      <div class="card shadow-sm">
+        <div class="card-header">Ingresos por día</div>
+        <div class="card-body" id="wrapDia">
+          <canvas id="chartDia" height="120"></canvas>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-6">
+      <div class="card shadow-sm">
+        <div class="card-header">Citas por estado</div>
+        <div class="card-body" id="wrapCitas">
+          <canvas id="chartCitas" height="120"></canvas>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-6">
+      <div class="card shadow-sm">
+        <div class="card-header">Top servicios</div>
+        <div class="card-body" id="wrapServ">
+          <canvas id="chartServ" height="120"></canvas>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-6">
+      <div class="card shadow-sm">
+        <div class="card-header">Top productos</div>
+        <div class="card-body" id="wrapProd">
+          <canvas id="chartProd" height="120"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tablas -->
+  <div class="row g-4">
+    <div class="col-lg-6">
+      <div class="card shadow-sm">
+        <div class="card-header">Inventario bajo</div>
+        <div class="card-body table-responsive">
+          <table class="table table-sm align-middle">
+            <thead><tr><th>ID</th><th>Producto</th><th class="text-end">Stock</th><th class="text-end">Mín.</th></tr></thead>
+            <tbody>
+              <% if ((stock||[]).length===0) { %>
+                <tr><td colspan="4" class="text-muted">Todo en orden ✅</td></tr>
+              <% } %>
+              <% (stock||[]).forEach(r => { %>
+                <tr>
+                  <td><%= r.ProductoID %></td>
+                  <td><%= r.Nombre %></td>
+                  <td class="text-end"><%= r.StockActual %></td>
+                  <td class="text-end"><%= r.StockMinimo %></td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-6">
+      <div class="card shadow-sm">
+        <div class="card-header">Bitácora (últimos 50)</div>
+        <div class="card-body table-responsive">
+          <table class="table table-sm align-middle">
+            <thead>
+              <tr>
+                <th>Fecha</th><th>Tabla</th><th>Acción</th><th>Llave</th><th>Usuario</th><th>Detalle</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if ((bitacora||[]).length===0) { %>
+                <tr><td colspan="6" class="text-muted">No hay registros de bitácora o la tabla no existe.</td></tr>
+              <% } %>
+              <% (bitacora||[]).forEach(b => { %>
+                <tr>
+                  <td><%= b.Fecha ? new Date(b.Fecha).toLocaleString() : '' %></td>
+                  <td><%= b.Tabla || '' %></td>
+                  <td><%= b.Accion || '' %></td>
+                  <td><%= b.Llave || '' %></td>
+                  <td><%= b.Usuario || '' %></td>
+                  <td>
+                    <button class="btn btn-sm btn-outline-secondary"
+                      data-json='<%- (b.Detalle || "").replace(/'/g,"&#39;") %>'
+                      onclick="verDetalle(this)">Ver</button>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para “Detalle” de bitácora -->
+<div class="modal fade" id="detalleModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Detalle</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <pre id="detallePre" class="mb-0" style="white-space:pre-wrap"></pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ==== Datos desde servidor ====
+  const porDia   = <%- JSON.stringify(porDia || []) %>;
+  const topServ  = <%- JSON.stringify(topServ || []) %>;
+  const topProd  = <%- JSON.stringify(topProd || []) %>;
+  const citas    = <%- JSON.stringify(citas || []) %>;
+
+  // ==== Utilidades ====
+  function emptyCard(id, msg='Sin datos en el rango seleccionado'){
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = `<div class="text-center text-muted py-5">${msg}</div>`;
+  }
+  function verDetalle(btn){
+    let raw = btn.dataset.json || '';
+    try { raw = JSON.stringify(JSON.parse(raw), null, 2); } catch(_) {}
+    document.getElementById('detallePre').textContent = raw || '—';
+    new bootstrap.Modal(document.getElementById('detalleModal')).show();
+  }
+
+  // ==== Gráfico: Ingresos por día ====
+  if (!porDia.length) {
+    emptyCard('wrapDia');
+  } else {
+    new Chart(document.getElementById('chartDia'), {
+      type: 'line',
+      data: {
+        labels: porDia.map(x => new Date(x.Dia).toISOString().split('T')[0]),
+        datasets: [{ label: 'Ingresos', data: porDia.map(x => x.Total), borderWidth:2, tension:.25 }]
+      },
+      options: { plugins:{ legend:{display:true} }, maintainAspectRatio:false }
+    });
+  }
+
+  // ==== Gráfico: Citas por estado ====
+  if (!citas.length) {
+    emptyCard('wrapCitas');
+  } else {
+    const mapEstado = { P:'Pendiente', R:'Realizada', C:'Cancelada' };
+    new Chart(document.getElementById('chartCitas'), {
+      type: 'doughnut',
+      data: { labels: citas.map(x => mapEstado[x.Estado] || x.Estado),
+              datasets: [{ data: citas.map(x => x.Cnt) }] },
+      options: { plugins:{ legend:{position:'bottom'} }, maintainAspectRatio:false }
+    });
+  }
+
+  // ==== Gráfico: Top servicios ====
+  if (!topServ.length) {
+    emptyCard('wrapServ');
+  } else {
+    new Chart(document.getElementById('chartServ'), {
+      type: 'bar',
+      data: { labels: topServ.map(x => x.Nombre),
+              datasets: [{ label: '₡', data: topServ.map(x => x.Total), borderWidth:1 }] },
+      options: { plugins:{ legend:{display:false} }, maintainAspectRatio:false }
+    });
+  }
+
+  // ==== Gráfico: Top productos ====
+  if (!topProd.length) {
+    emptyCard('wrapProd');
+  } else {
+    new Chart(document.getElementById('chartProd'), {
+      type: 'bar',
+      data: { labels: topProd.map(x => x.Nombre),
+              datasets: [{ label: '₡', data: topProd.map(x => x.Total), borderWidth:1 }] },
+      options: { plugins:{ legend:{display:false} }, maintainAspectRatio:false }
+    });
+  }
+</script>
+
+<%- include('partials/footer') %>

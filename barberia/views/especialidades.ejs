@@ -1,0 +1,32 @@
+<%- include('partials/header', { titulo: 'Especialidades' }) %>
+
+<h3><%= espEditar ? 'Editar' : 'Nueva' %> especialidad</h3>
+
+<form method="POST" action="<%= espEditar ? '/especialidades/editar/' + espEditar.EspecialidadID : '/especialidades/agregar' %>">
+  <input class="form-control mb-2" name="Nombre" placeholder="Nombre" value="<%= espEditar ? espEditar.Nombre : '' %>" required>
+  <button class="btn btn-success"><%= espEditar ? 'Actualizar' : 'Agregar' %></button>
+  <% if (espEditar) { %>
+    <a class="btn btn-secondary ms-2" href="/especialidades">Cancelar</a>
+  <% } %>
+</form>
+
+<table class="table mt-4">
+  <thead>
+    <tr><th>Código</th><th>Nombre</th><th></th></tr>
+  </thead>
+  <tbody>
+    <% especialidades.forEach(e => { %>
+      <tr>
+        <td><%= e.Codigo %></td>
+        <td><%= e.Nombre %></td>
+        <td>
+          <a class="btn btn-sm btn-primary" href="/especialidades/editar/<%= e.EspecialidadID %>">Editar</a>
+          <!-- enlace rápido para asignar a un barbero específico desde otra pantalla -->
+        </td>
+      </tr>
+    <% }) %>
+  </tbody>
+</table>
+
+<%- include('partials/footer') %>
+
