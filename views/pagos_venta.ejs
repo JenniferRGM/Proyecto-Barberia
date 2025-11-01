@@ -1,0 +1,44 @@
+<%- include('partials/header', { titulo: 'Pagos de la venta' }) %>
+
+<h2 class="mb-3">Pagos de la venta <code><%= venta.VentaID %></code></h2>
+
+<div class="row g-3 mb-3">
+  <div class="col-md-4"><b>Cliente:</b> <%= venta.Cliente %></div>
+  <div class="col-md-4"><b>Total Venta:</b> ₡<%= Number(venta.MontoTotal).toFixed(2) %></div>
+  <div class="col-md-4">
+    <b>Total Pagado:</b> ₡<%= Number(totalPagado).toFixed(2) %> <br>
+    <b>Saldo:</b> 
+    <span class="badge <%= saldo <= 0 ? 'bg-success' : 'bg-warning text-dark' %>">
+      ₡<%= Number(saldo).toFixed(2) %>
+    </span>
+  </div>
+</div>
+
+<div class="mb-3">
+  <a href="/pagos/nuevo" class="btn btn-success">Registrar otro pago</a>
+  <a href="/ventas/<%= venta.VentaID %>" class="btn btn-outline-primary">Ver detalle de venta</a>
+  <a href="/pagos" class="btn btn-secondary">Volver</a>
+</div>
+
+<table class="table table-bordered table-striped">
+  <thead class="table-dark">
+    <tr>
+      <th>Pago</th>
+      <th>Método</th>
+      <th class="text-end">Monto</th>
+      <th>Fecha</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% pagos.forEach(p => { %>
+      <tr>
+        <td><%= p.PagoID %></td>
+        <td><%= p.MetodoPago %></td>
+        <td class="text-end">₡<%= Number(p.Monto).toFixed(2) %></td>
+        <td><%= new Date(p.FechaPago).toISOString().split('T')[0] %></td>
+      </tr>
+    <% }) %>
+  </tbody>
+</table>
+
+<%- include('partials/footer') %>

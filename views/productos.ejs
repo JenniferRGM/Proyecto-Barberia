@@ -1,0 +1,62 @@
+<%- include('partials/header', { titulo: 'Productos' }) %>
+<!-- Logo lateral (solo pantallas grandes) -->
+<style>
+  .logo-side {
+    position: fixed;
+    left: 10px;           /* Ajusta la distancia al borde izquierdo */
+    top: 96px;            /* Ajusta para que no tape la navbar */
+    width: 260px;         /* Tamaño del logo */
+    opacity: .10;         /* Transparencia para que no moleste */
+    z-index: 0;           /* Debajo del contenido */
+    pointer-events: none; /* No bloquea clics del contenido */
+    filter: grayscale(100%);
+  }
+  @media (max-width: 1399.98px) { /* se oculta en pantallas medianas/pequeñas */
+    .logo-side { display: none; }
+  }
+</style>
+
+<div class="logo-side">
+  <img src="/img/Logo.jpg" alt="Logo Barbería Studio 90's" style="width:100%;height:auto;">
+</div>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h2>Productos</h2>
+  <a href="/productos/nuevo" class="btn btn-success">Nuevo producto</a>
+</div>
+
+<table class="table table-striped table-bordered">
+  <thead class="table-dark">
+    <tr>
+      <th>ID</th><th>Nombre</th><th>Marca</th>
+      <th>Precio venta</th><th>Costo</th>
+      <th class="text-end">Stock</th><th class="text-end">Mínimo</th>
+      <th>Entrada</th><th>Salida</th><th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <% (productos || []).forEach(p => { %>
+      <tr class="<%= p.StockActual <= p.StockMinimo ? 'table-warning' : '' %>">
+        <td><%= p.ProductoID %></td>
+        <td><%= p.Nombre %></td>
+        <td><%= p.Marca %></td>
+        <td>₡<%= Number(p.PrecioVenta).toFixed(2) %></td>
+        <td>₡<%= Number(p.Costo).toFixed(2) %></td>
+        <td class="text-end"><%= p.StockActual %></td>
+        <td class="text-end"><%= p.StockMinimo %></td>
+        <td><%= p.FechaEntrada ? new Date(p.FechaEntrada).toISOString().split('T')[0] : '' %></td>
+        <td><%= p.FechaSalida ? new Date(p.FechaSalida).toISOString().split('T')[0] : '' %></td>
+        <td class="text-nowrap">
+          <a class="btn btn-sm btn-primary" href="/productos/editar/<%= p.ProductoID %>">Editar</a>
+          <form action="/productos/eliminar/<%= p.ProductoID %>" method="POST" class="d-inline"
+                onsubmit="return confirm('¿Eliminar producto <%= p.ProductoID %>?')">
+            <button class="btn btn-sm btn-danger">Eliminar</button>
+          </form>
+        </td>
+      </tr>
+    <% }) %>
+  </tbody>
+</table>
+
+<%- include('partials/footer') %>
+

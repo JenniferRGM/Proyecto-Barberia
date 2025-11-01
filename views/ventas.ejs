@@ -1,0 +1,53 @@
+<%- include('partials/header', { titulo: 'Ventas' }) %>
+<!-- Logo lateral (solo pantallas grandes) -->
+<style>
+  .logo-side {
+    position: fixed;
+    left: 10px;           /* Ajusta la distancia al borde izquierdo */
+    top: 96px;            /* Ajusta para que no tape la navbar */
+    width: 260px;         /* Tamaño del logo */
+    opacity: .10;         /* Transparencia para que no moleste */
+    z-index: 0;           /* Debajo del contenido */
+    pointer-events: none; /* No bloquea clics del contenido */
+    filter: grayscale(100%);
+  }
+  @media (max-width: 1399.98px) { /* Se oculta en pantallas medianas/pequeñas */
+    .logo-side { display: none; }
+  }
+</style>
+
+<div class="logo-side">
+  <img src="/img/Logo.jpg" alt="Logo Barbería Studio 90's" style="width:100%;height:auto;">
+</div>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h2>Ventas</h2>
+  <a href="/ventas/nueva" class="btn btn-success">Nueva venta</a>
+</div>
+
+<table class="table table-striped table-bordered">
+  <thead class="table-dark">
+    <tr>
+      <th>Venta</th>
+      <th>Cliente</th>
+      <th>Fecha</th>
+      <th>Total</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <% ventas.forEach(v => { %>
+      <tr>
+        <td><%= v.VentaID %></td>
+        <td><%= v.Cliente %></td>
+        <td><%= new Date(v.FechaVenta).toISOString().split('T')[0] %></td>
+        <td>₡<%= Number(v.MontoTotal).toFixed(2) %></td>
+        <td>
+          <a href="/ventas/<%= v.VentaID %>" class="btn btn-sm btn-primary">Ver</a>
+        </td>
+      </tr>
+    <% }) %>
+  </tbody>
+</table>
+
+<%- include('partials/footer') %>

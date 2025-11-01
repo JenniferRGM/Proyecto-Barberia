@@ -1,0 +1,94 @@
+<%- include('partials/header', { titulo: 'Servicios' }) %>
+<!-- Logo lateral (solo pantallas grandes) -->
+<style>
+  .logo-side {
+    position: fixed;
+    left: 10px;           /* Ajusta la distancia al borde izquierdo */
+    top: 96px;            /* Ajusta para que no tape la navbar */
+    width: 260px;         /* Tamaño del logo */
+    opacity: .10;         /* Transparencia para que no moleste */
+    z-index: 0;           /* Debajo del contenido */
+    pointer-events: none; /* No bloquea clics del contenido */
+    filter: grayscale(100%);
+  }
+  @media (max-width: 1399.98px) { /* Se oculta en pantallas medianas/pequeñas */
+    .logo-side { display: none; }
+  }
+</style>
+
+<div class="logo-side">
+  <img src="/img/Logo.jpg" alt="Logo Barbería Studio 90's" style="width:100%;height:auto;">
+</div>
+
+<% const edit = typeof servicioEditar !== 'undefined' && servicioEditar ? servicioEditar : null; %>
+
+<h4 class="mb-3"><%= edit ? 'Editar Servicio' : 'Agregar Servicio' %></h4>
+
+<form action="<%= edit ? ('/servicios/editar/' + edit.ServicioID) : '/servicios/agregar' %>" method="POST" class="mb-4" enctype="multipart/form-data">
+  <div class="row mb-2">
+    <div class="col-md-4">
+      <label class="form-label">Nombre</label>
+      <input class="form-control" name="Nombre" value="<%= edit ? edit.Nombre : '' %>" required>
+    </div>
+    <div class="col-md-4">
+      <label class="form-label">Descripción</label>
+      <input class="form-control" name="Descripcion" value="<%= edit ? edit.Descripcion : '' %>">
+    </div>
+    <div class="col-md-2">
+      <label class="form-label">Precio</label>
+      <input class="form-control" type="number" step="0.01" name="Precio" value="<%= edit ? edit.Precio : '' %>" required>
+    </div>
+    <div class="col-md-2">
+      <label class="form-label">Duración (min)</label>
+      <input class="form-control" type="number" name="DuracionMinutos" value="<%= edit ? edit.DuracionMinutos : '' %>" required>
+    </div>
+  </div>
+  <div class="row mb-3">
+    <div class="col-md-6">
+      <label class="form-label">Imagen (jpg, png, webp, gif)</label>
+      <input class="form-control" type="file" name="Imagen" accept=".jpg,.jpeg,.png,.webp,.gif">
+      <% if (edit && edit.Imagen) { %>
+        <div class="mt-2">
+          <img src="<%= edit.Imagen %>" alt="Imagen actual" style="max-width:220px; height:140px; object-fit:cover; border:1px solid #ddd;">
+        </div>
+      <% } %>
+    </div>
+  </div>
+
+  <button class="btn btn-primary"><%= edit ? 'Actualizar' : 'Guardar' %></button>
+  <% if (edit) { %>
+    <a class="btn btn-secondary ms-2" href="/servicios">Cancelar</a>
+  <% } %>
+</form>
+
+<table class="table table-bordered table-striped">
+  <thead class="table-dark">
+    <tr>
+      <th>Nombre</th>
+      <th>Descripción</th>
+      <th>Precio</th>
+      <th>Duración</th>
+      <th style="width: 170px;">Acciones</th>
+    </tr>
+  </thead>
+  <tbody>
+  <% servicios.forEach(s => { %>
+    <tr>
+      <td><%= s.Nombre %></td>
+      <td><%= s.Descripcion %></td>
+      <td><%= Number(s.Precio).toFixed(2) %></td>
+      <td><%= s.DuracionMinutos %> min</td>
+      <td>
+        <a class="btn btn-sm btn-primary" href="/servicios/editar/<%= s.ServicioID %>">Editar</a>
+        <form action="/servicios/eliminar/<%= s.ServicioID %>" method="POST" class="d-inline"
+              onsubmit="return confirm('¿Eliminar este servicio?');">
+          <button class="btn btn-sm btn-danger">Eliminar</button>
+        </form>
+      </td>
+    </tr>
+  <% }) %>
+  </tbody>
+</table>
+
+<%- include('partials/footer') %>
+

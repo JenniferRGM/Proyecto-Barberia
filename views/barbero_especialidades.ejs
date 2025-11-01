@@ -1,0 +1,62 @@
+<%- include('partials/header', { titulo: 'Especialidades del barbero' }) %>
+
+<!-- Logo lateral (solo pantallas grandes) -->
+<style>
+  .logo-side {
+    position: fixed;
+    left: 10px;           /* Ajusta la distancia al borde izquierdo */
+    top: 96px;            /* Ajusta para que no tape la navbar */
+    width: 260px;         /* Tamaño del logo */
+    opacity: .10;         /* Transparencia para que no moleste */
+    z-index: 0;           /* Debajo del contenido */
+    pointer-events: none; /* No bloquea clics del contenido */
+    filter: grayscale(100%);
+  }
+  @media (max-width: 1399.98px) { /* Se oculta en pantallas medianas/pequeñas */
+    .logo-side { display: none; }
+  }
+</style>
+
+<div class="logo-side">
+  <img src="/img/Logo.jpg" alt="Logo Barbería Studio 90's" style="width:100%;height:auto;">
+</div>
+
+<h3>Asignar especialidades al barbero <code><%= barberoId %></code></h3>
+
+<% if (typeof success !== 'undefined' && success) { %>
+  <div id="msg-ok" class="alert alert-success" role="alert">
+    ✅ Especialidades guardadas correctamente.
+  </div>
+<% } %>
+
+<form method="POST" action="/especialidades/barbero/<%= barberoId %>">
+  <% especialidades.forEach(e => { %>
+    <div class="form-check">
+      <input
+        class="form-check-input"
+        type="checkbox"
+        name="especialidades[]" 
+        value="<%= e.EspecialidadID %>"
+        <%= setAsignadas.has(e.EspecialidadID) ? 'checked' : '' %>>
+      <label class="form-check-label"><%= e.Codigo %> — <%= e.Nombre %></label>
+    </div>
+  <% }) %>
+
+  <button class="btn btn-primary mt-3">Guardar</button>
+</form>
+
+<script>
+ 
+  (function () {
+    const el = document.getElementById('msg-ok');
+    if (!el) return;
+    setTimeout(() => {
+      el.style.transition = 'opacity .5s ease';
+      el.style.opacity = '0';
+      setTimeout(() => el.remove(), 600);
+    }, 3000);
+  })();
+</script>
+
+
+<%- include('partials/footer') %>
