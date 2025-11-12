@@ -3,7 +3,7 @@ const sql = require('mssql');
 const config = {
   user: 'admin_barberia',
   password: 'barberia90',
-  server: 'JENNIFER\\SQLEXPRESS',
+  server: 'LAPTOP-TST07H1E\\SQLEXPRESS',
   database: 'Barberia',
   options: {
     trustServerCertificate: true
