@@ -47,6 +47,9 @@
           <% if (typeof success !== 'undefined' && success) { %>
             <div class="alert alert-success"><%= success %></div>
           <% } %>
+          <% if (typeof errorConsent !== 'undefined' && errorConsent) { %>
+            <div class="alert alert-warning"><%= errorConsent %></div>
+          <% } %>
 
           <form action="/registro" method="POST" id="registroForm">
             <!-- Datos de acceso -->
@@ -123,6 +126,27 @@
                          value="<%= v.direccion || '' %>">
                 </div>
               </div>
+            </div>
+
+            <!-- Consentimiento de Política de Privacidad -->
+             <div class="form-check mt-4">
+              <input
+                class="form-check-input"
+                type="checkbox"
+                id="consentimiento"
+                name="consentimiento"
+                value="1"
+                required
+                <%= v.consentimiento ? 'checked' : '' %>
+              >
+              <label class="form-check-label" for="consentimiento">
+                He leído y acepto la
+                <a href="/privacidad" target="_blank">Política de Privacidad</a>
+                del sistema Barber Manager. Doy mi consentimiento expreso, libre e informado
+                para que mis datos personales sean recolectados y tratados conforme a los fines
+                establecidos en dicha política y en cumplimiento de la Ley N.º 8968 de Protección
+                de Datos Personales.
+              </label>
             </div>
 
             <div class="d-flex gap-2 mt-4">

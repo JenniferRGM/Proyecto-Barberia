@@ -87,6 +87,11 @@ app.use('/clientes', requireAuth, onlySelfClient, clientesRoutes);
 app.use('/servicios', serviciosRoutes);
 app.use('/productos', productosRoutes);
 
+// Política de Privacidad
+app.get('/privacidad', (req, res) => {
+  res.render('privacidad', { titulo: 'Política de Privacidad' });
+});
+
 // 404
 app.use((req, res) => res.status(404).send('Página no encontrada'));
 

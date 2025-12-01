@@ -23,7 +23,7 @@ async function nextId(tx, table, col, prefix, width = 3) {
 
 // GET registro
 router.get('/', (req, res) => {
-  res.render('registro', { error: undefined, success: undefined, titulo: 'Registrarse', values: {}, hideNav:true });
+  res.render('registro', { error: undefined, success: undefined, titulo: 'Registrarse', values: {}, hideNav:true, errorConsent: undefined });
 });
 
 // POST registro
@@ -40,23 +40,27 @@ router.post('/', async (req, res) => {
     apellido2 = '',
     telefono = '',
     fechaNacimiento = null,   // 'YYYY-MM-DD' o ''
-    direccion = ''
+    direccion = '',
+    consentimiento
   } = req.body;
 
   const hoy = new Date();
+  const values = { ...req.body };
 
   // Validaciones mínimas
   if (!['cliente','barbero','admin'].includes(rol)) {
-    return res.render('registro', { error:'Rol inválido.', success:undefined, titulo:'Registrarse', values:req.body, hideNav:true });
+    return res.render('registro', { error:'Rol inválido.', success:undefined, titulo:'Registrarse', values:req.body, hideNav:true, errorConsent: undefined });
   }
   if (!nombreUsuario.trim() || !correo.trim() || !contrasena) {
-    return res.render('registro', { error:'Complete usuario, correo y contraseña.', success:undefined, titulo:'Registrarse', values:req.body, hideNav:true });
+    return res.render('registro', { error:'Complete usuario, correo y contraseña.', success:undefined, titulo:'Registrarse', values:req.body, hideNav:true, errorConsent: undefined });
   }
+  //Validar consentimiento
+  if (!consentimiento) {  return res.render('registro', { error: undefined, success: undefined, titulo: 'Registrarse', values: req.body, hideNav: true, errorConsent: 'Debes aceptar la Política de Privacidad para poder registrarte.' }); }
   if (rol === 'cliente' || rol === 'barbero') {
-    if (!SOLO_LETRAS.test(nombre))    return res.render('registro', { error:'Nombre inválido (solo letras y espacios).', success:undefined, titulo:'Registrarse', values:req.body, hideNav:true });
-    if (!SOLO_LETRAS.test(apellido1)) return res.render('registro', { error:'Primer apellido inválido.', success:undefined, titulo:'Registrarse', values:req.body, hideNav:true });
-    if (apellido2 && !SOLO_LETRAS.test(apellido2)) return res.render('registro', { error:'Segundo apellido inválido.', success:undefined, titulo:'Registrarse', values:req.body, hideNav:true });
-    if (telefono && !SOLO_TEL.test(telefono))       return res.render('registro', { error:'Teléfono inválido.', success:undefined, titulo:'Registrarse', values:req.body, hideNav:true });
+    if (!SOLO_LETRAS.test(nombre))    return res.render('registro', { error:'Nombre inválido (solo letras y espacios).', success:undefined, titulo:'Registrarse', values:req.body, hideNav:true, errorConsent: undefined });
+    if (!SOLO_LETRAS.test(apellido1)) return res.render('registro', { error:'Primer apellido inválido.', success:undefined, titulo:'Registrarse', values:req.body, hideNav:true, errorConsent: undefined });
+    if (apellido2 && !SOLO_LETRAS.test(apellido2)) return res.render('registro', { error:'Segundo apellido inválido.', success:undefined, titulo:'Registrarse', values:req.body, hideNav:true, errorConsent: undefined });
+    if (telefono && !SOLO_TEL.test(telefono))       return res.render('registro', { error:'Teléfono inválido.', success:undefined, titulo:'Registrarse', values:req.body, hideNav:true, errorConsent: undefined });
   }
 
   const tx = new sql.Transaction(pool);
@@ -76,7 +80,8 @@ router.post('/', async (req, res) => {
         success: undefined,
         titulo: 'Registrarse',
         values: req.body,
-        hideNav: true
+        hideNav: true,
+        errorConsent: undefined
       });
     }
 
@@ -100,13 +105,15 @@ router.post('/', async (req, res) => {
         .input('Direccion',         sql.VarChar(100), direccion || '')
         .input('Estado',            sql.Char(1),      'A')
         .input('UsuarioRegistro',   sql.VarChar(50),  nombreUsuario)
+        .input('Consentimiento',      sql.Bit,         1)
+        .input('FechaConsentimiento', sql.DateTime,    hoy)
         .query(`
           INSERT INTO Clientes
             (ClienteID, Nombre, Apellido1, Apellido2, Telefono, CorreoElectronico,
-             FechaNacimiento, FechaRegistro, Direccion, Estado, UsuarioRegistro)
+             FechaNacimiento, FechaRegistro, Direccion, Estado, UsuarioRegistro, Consentimiento, FechaConsentimiento)
           VALUES
             (@ClienteID, @Nombre, @Apellido1, @Apellido2, @Telefono, @CorreoElectronico,
-             @FechaNacimiento, @FechaRegistro, @Direccion, @Estado, @UsuarioRegistro)
+             @FechaNacimiento, @FechaRegistro, @Direccion, @Estado, @UsuarioRegistro, @Consentimiento, @FechaConsentimiento)
         `);
     }
 
@@ -124,13 +131,15 @@ router.post('/', async (req, res) => {
         .input('FechaContratacion', sql.Date,         hoy)
         .input('Estado',            sql.Char(1),      'A')
         .input('UsuarioRegistro',   sql.VarChar(50),  nombreUsuario)
+        .input('Consentimiento',      sql.Bit,         1)
+        .input('FechaConsentimiento', sql.DateTime,    hoy)
         .query(`
           INSERT INTO Barberos
             (BarberoID, Nombre, Apellido1, Apellido2, Telefono, CorreoElectronico,
-             FechaNacimiento, FechaContratacion, Estado, UsuarioRegistro)
+             FechaNacimiento, FechaContratacion, Estado, UsuarioRegistro, Consentimiento, FechaConsentimiento)
           VALUES
             (@BarberoID, @Nombre, @Apellido1, @Apellido2, @Telefono, @CorreoElectronico,
-             @FechaNacimiento, @FechaContratacion, @Estado, @UsuarioRegistro)
+             @FechaNacimiento, @FechaContratacion, @Estado, @UsuarioRegistro, @Consentimiento, @FechaConsentimiento)
         `);
     }
 
@@ -159,7 +168,8 @@ router.post('/', async (req, res) => {
       error: undefined,
       titulo: 'Registrarse',
       values: {},
-      hideNav: true
+      hideNav: true,
+      errorConsent: undefined
     });
 
   } catch (err) {
@@ -171,7 +181,8 @@ router.post('/', async (req, res) => {
       success: undefined,
       titulo: 'Registrarse',
       values: req.body,
-      hideNav: true
+      hideNav: true,
+      errorConsent: undefined
     });
   }
 });
