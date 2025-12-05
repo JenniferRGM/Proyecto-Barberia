@@ -196,13 +196,13 @@ router.get('/editar/:id', async (req, res) => {
 
     // Listas filtradas según rol
     let reqClientes = pool.request();
-    let sqlClientes = 'SELECT ClienteID, Nombre, Apellido1 FROM Clientes';
+    let sqlClientes = 'SELECT ClienteID, Nombre, Apellido1 FROM Clientes WHERE Estado = "A"';
     if (isCliente(req)) {
       sqlClientes += ' WHERE ClienteID = @clid';
       reqClientes = reqClientes.input('clid', sql.VarChar(15), req.session.clienteId);
     }
     let reqBarberos = pool.request();
-    let sqlBarberos = 'SELECT BarberoID, Nombre, Apellido1 FROM Barberos';
+    let sqlBarberos = 'SELECT BarberoID, Nombre, Apellido1 FROM Barberos WHERE Estado = "A"';
     if (isBarbero(req)) {
       sqlBarberos += ' WHERE BarberoID = @bid';
       reqBarberos = reqBarberos.input('bid', sql.VarChar(15), req.session.barberoId);

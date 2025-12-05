@@ -22,6 +22,7 @@ router.get('/', async (req, res) => {
       SELECT BarberoID, Nombre, Apellido1, Apellido2, CorreoElectronico, Telefono,
              FechaNacimiento, FechaContratacion, Estado
       FROM Barberos
+      WHERE Estado = 'A'
       ORDER BY Nombre, Apellido1
     `);
 
@@ -128,7 +129,7 @@ router.post('/eliminar/:id', async (req, res) => {
 
     await pool.request()
       .input('BarberoID', sql.VarChar(15), req.params.id)
-      .query('DELETE FROM Barberos WHERE BarberoID=@BarberoID');
+      .query("UPDATE Barberos SET Estado = 'I' WHERE BarberoID = @BarberoID");
 
     res.redirect('/barberos?msg=eliminado');
   } catch (err) {
