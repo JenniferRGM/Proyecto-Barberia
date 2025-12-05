@@ -87,6 +87,11 @@ app.use('/clientes', requireAuth, onlySelfClient, clientesRoutes);
 app.use('/servicios', serviciosRoutes);
 app.use('/productos', productosRoutes);
 
+// Política de Privacidad
+app.get('/privacidad', (req, res) => {
+  res.render('privacidad', { titulo: 'Política de Privacidad' });
+});
+
 // 404
 app.use((req, res) => res.status(404).send('Página no encontrada'));
 
@@ -95,4 +100,4 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Servidor iniciado en http://localhost:${PORT}`);
 });
-
+app.use(express.static('public'));

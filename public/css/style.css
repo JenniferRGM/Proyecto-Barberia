@@ -1,0 +1,54 @@
+/* ===== Estilos generales ===== */
+body {
+  background-color: #1c1c1c;
+  color: #000000;
+  transition: background-color 0.3s, color 0.3s;
+}
+
+/* ===== Navbar ===== */
+.navbar {
+  background-color: #f8f9fa;
+  color: #000000;
+}
+
+/* ===== Modo oscuro ===== */
+.dark-mode body {
+  background-color: #121212;
+  color: #e0e0e0;
+}
+
+.dark-mode .navbar {
+  background-color: #1f1f1f;
+  color: #ffffff;
+}
+
+.dark-mode a {
+  color: #ffffff;
+}
+
+.dark-mode table {
+  background-color: #525252;
+  color: #e0e0e0;
+}
+
+.dark-mode input,
+.dark-mode select,
+.dark-mode textarea {
+  background-color: #333;
+  color: #fff;
+  border: 1px solid #555;
+}
+
+.dark-mode .bg-light {
+  background-color: #121212 !important;
+  color: #e0e0e0 !important;
+}
+
+.dark-mode .card {
+  background-color: #393939;
+  color: #ddd;
+}
+
+.dark-mode .container {
+  background-color: transparent;
+}
