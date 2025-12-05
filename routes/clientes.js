@@ -11,7 +11,7 @@ function generarIDCliente(numero) {
 router.get('/', async (req, res) => {
   try {
     await poolConnect;
-    const result = await pool.request().query('SELECT * FROM Clientes');
+    const result = await pool.request().query('SELECT * FROM Clientes WHERE Estado = "A"');
     res.render('clientes', { clientes: result.recordset, clienteEditar: null });
   } catch (err) {
     console.error(err);
@@ -101,7 +101,7 @@ router.post('/eliminar/:id', async (req, res) => {
     await poolConnect;
     await pool.request()
       .input('ClienteID', sql.VarChar, id)
-      .query('DELETE FROM Clientes WHERE ClienteID = @ClienteID');
+      .query("UPDATE Clientes SET Estado = 'I' WHERE ClienteID = @ClienteID");
 
     res.redirect('/clientes');
   } catch (err) {
