@@ -11,7 +11,7 @@ function generarIDCliente(numero) {
 router.get('/', async (req, res) => {
   try {
     await poolConnect;
-    const result = await pool.request().query('SELECT * FROM Clientes WHERE Estado = "A"');
+    const result = await pool.request().query("SELECT * FROM Clientes WHERE Estado = 'A'");
     res.render('clientes', { clientes: result.recordset, clienteEditar: null });
   } catch (err) {
     console.error(err);
