@@ -79,7 +79,7 @@ router.post('/', async (req, res) => {
 
     if (!usuario) {
       return res.render('login', {
-        toast: { type: 'danger', message: 'Usuario o contraseña incorrectos' },
+        toast: { type: 'danger', message: 'Usuario o contraseña incorrectos valide nuevamente' },
         values: { nombreUsuario: user, recordarme: !!recordarme },
         next,
         titulo: 'Iniciar Sesión',
@@ -94,7 +94,7 @@ router.post('/', async (req, res) => {
     const valid = await bcrypt.compare(pass, hash);
     if (!valid) {
       return res.render('login', {
-        toast: { type: 'danger', message: 'Usuario o contraseña incorrectos' },
+        toast: { type: 'danger', message: 'Usuario o contraseña incorrectos valide nuevamente' },
         values: { nombreUsuario: user, recordarme: !!recordarme },
         next,
         titulo: 'Iniciar Sesión',

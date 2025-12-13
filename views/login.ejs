@@ -1,17 +1,17 @@
 <%- include('partials/header', { titulo: 'Iniciar Sesión', hideNav: true }) %>
-<!-- Logo lateral (solo pantallas grandes) -->
+<!-- Logo lateral-->
 <style>
   .logo-side {
     position: fixed;
-    left: 10px;           /* Ajusta la distancia al borde izquierdo */
-    top: 96px;            /* Ajusta para que no tape la navbar */
-    width: 260px;         /* Tamaño del logo */
-    opacity: .10;         /* Transparencia para que no moleste */
-    z-index: 0;           /* Debajo del contenido */
-    pointer-events: none; /* No bloquea clics del contenido */
+    left: 10px;           
+    top: 96px;            
+    width: 260px;        
+    opacity: .10;         
+    z-index: 0;           
+    pointer-events: none; 
     filter: grayscale(100%);
   }
-  @media (max-width: 1399.98px) { /* Se oculta en pantallas medianas/pequeñas */
+  @media (max-width: 1399.98px) { 
     .logo-side { display: none; }
   }
 </style>
@@ -38,6 +38,13 @@
             <h4 class="mb-1">Bienvenido a Barbería Studio's 90's</h4>
             <div class="text-muted small">Ingresa para continuar</div>
           </div>
+
+           <% if (toast) { %>
+            <div class="alert alert-<%= toast.type === 'danger' ? 'danger' : (toast.type || 'primary') %> alert-dismissible fade show" role="alert">
+              <%= toast.message %>
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+            </div>
+            <% } %>
 
           <form action="/login<%= next ? ('?next=' + encodeURIComponent(next)) : '' %>" 
                 method="POST" id="formLogin" class="needs-validation" novalidate>
@@ -127,9 +134,8 @@
   })();
 
   // -------- TOAST ----------
-  const toastData   = <%- JSON.stringify(toast || null) %>;
-  const legacyError = <%- JSON.stringify(error || null) %>;
-  const data = toastData || (legacyError ? { type:'danger', message: legacyError } : null);
+
+  const data   = <%- JSON.stringify(toast || null) %>;
 
   if (data) {
     const el = document.getElementById('appToast');
