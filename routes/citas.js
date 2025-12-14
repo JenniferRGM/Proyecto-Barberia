@@ -75,6 +75,78 @@ function addAuthCondition(req, request, alias='') {
   return { cond, req: r };
 }
 
+async function hayChoqueBarbero({ BarberoID, Fecha, HoraInicio, HoraFin, excludeCitaID = null }) {
+  let q = `
+    SELECT COUNT(*) AS Cnt
+    FROM Citas
+    WHERE BarberoID = @bid
+      AND Fecha = @fecha
+      AND Estado <> 'C'
+      AND NOT (@hf <= HoraInicio OR @hi >= HoraFin)
+  `;
+
+  const r = pool.request()
+    .input('bid', sql.VarChar(15), BarberoID)
+    .input('fecha', sql.Date, Fecha)
+    .input('hi', sql.Time, HoraInicio)
+    .input('hf', sql.Time, HoraFin);
+
+    if (excludeCitaID) {
+    q += ` AND CitaID <> @cid`;
+    r.input('cid', sql.VarChar(10), excludeCitaID);
+  }
+
+  const { recordset } = await r.query(q);
+  return (recordset[0]?.Cnt || 0) > 0;
+}
+
+async function cargarDatosCitas(req) {
+  // Clientes para el select (si es cliente -> solo él)
+  let reqClientes = pool.request();
+  let sqlClientes = "SELECT ClienteID, Nombre, Apellido1 FROM Clientes";
+  if (isCliente(req)) {
+    sqlClientes += " WHERE ClienteID = @clid";
+    reqClientes = reqClientes.input('clid', sql.VarChar(15), req.session.clienteId);
+  }
+
+  // Barberos para el select (si es barbero -> solo él)
+  let reqBarberos = pool.request();
+  let sqlBarberos = "SELECT BarberoID, Nombre, Apellido1 FROM Barberos";
+  if (isBarbero(req)) {
+    sqlBarberos += " WHERE BarberoID = @bid";
+    reqBarberos = reqBarberos.input('bid', sql.VarChar(15), req.session.barberoId);
+  }
+
+  // Citas filtradas por rol
+  const { where, req: reqCitas } = buildRoleFilterForCitas(req);
+
+  const [clientes, barberos, servicios, citas] = await Promise.all([
+    reqClientes.query(sqlClientes),
+    reqBarberos.query(sqlBarberos),
+    pool.request().query("SELECT ServicioID, Nombre FROM Servicios"),
+    reqCitas.query(`
+      SELECT c.*, 
+             cl.Nombre + ' ' + cl.Apellido1 AS ClienteNombre,
+             b.Nombre  + ' ' + b.Apellido1  AS BarberoNombre,
+             s.Nombre  AS ServicioNombre
+      FROM Citas c
+      JOIN Clientes  cl ON c.ClienteID  = cl.ClienteID
+      JOIN Barberos  b  ON c.BarberoID = b.BarberoID
+      JOIN Servicios s  ON c.ServicioID = s.ServicioID
+      ${where}
+      ORDER BY c.Fecha DESC, c.HoraInicio
+    `)
+  ]);
+
+  return {
+    citas: citas.recordset,
+    clientes: clientes.recordset,
+    barberos: barberos.recordset,
+    servicios: servicios.recordset
+  };
+}
+
+
 /* ================== Listado + Formulario ================== */
 router.get('/', async (req, res) => {
   try {
@@ -120,7 +192,8 @@ router.get('/', async (req, res) => {
       barberos  : barberos.recordset, 
       servicios : servicios.recordset,
       citaEditar: null,
-      rol       : req.session?.rol || null 
+      rol       : req.session?.rol || null,
+      toast     : null
     });
 
   } catch (err) {
@@ -144,25 +217,72 @@ router.post('/agregar', async (req, res) => {
     if (isCliente(req))   ClienteID = req.session.clienteId;
     if (isBarbero(req))   BarberoID = req.session.barberoId;
 
+     // Validaciones básicas
+    if (!ClienteID || !BarberoID || !ServicioID || !Fecha) {
+      const data = await cargarDatosCitas(req);
+      return res.status(400).render('citas', {
+        ...data,
+        citaEditar: null,
+        rol: req.session?.rol || null,
+        toast: { type: 'danger', message: 'Faltan datos obligatorios.' }
+      });
+    }
+
     // Valida horas
     const tHi = parseTimeHHMM(HoraInicio);
     const tHf = parseTimeHHMM(HoraFin);
-    if (!tHi || !tHf) throw new Error('Hora inválida');
-    if (minutesOf(tHf) <= minutesOf(tHi))
-      throw new Error('HoraInicio debe ser menor que HoraFin');
+    if (!tHi || !tHf) {
+      const data = await cargarDatosCitas(req);
+      return res.status(400).render('citas', {
+        ...data,
+        citaEditar: null,
+        rol: req.session?.rol || null,
+        toast: { type: 'danger', message: 'Hora inválida. Use formato HH:mm.' }
+      });
+    }
+    if (minutesOf(tHf) <= minutesOf(tHi)) {
+      const data = await cargarDatosCitas(req);
+      return res.status(400).render('citas', {
+        ...data,
+        citaEditar: null,
+        rol: req.session?.rol || null,
+        toast: { type: 'danger', message: 'La hora de fin debe ser mayor que la hora de inicio.' }
+      });
+    }
 
     const hiDate = timeAsDate(tHi.h, tHi.mi);
     const hfDate = timeAsDate(tHf.h, tHf.mi);
 
+    //  Valida disponibilidad del barbero
+    const choque = await hayChoqueBarbero({
+      BarberoID,
+      Fecha,
+      HoraInicio: hiDate,
+      HoraFin: hfDate
+      // excludeCitaID: null (no aplica en agregar)
+    });
+
+    if (choque) {
+      const data = await cargarDatosCitas(req);
+      return res.status(409).render('citas', {
+        ...data,
+        citaEditar: null,
+        rol: req.session?.rol || null,
+        toast: { type: 'danger', message: 'El barbero ya tiene una cita en ese horario. Elige otra hora o barbero.' }
+      });
+    }
+
     const usuarioApp = await setUsuarioContext(req);
 
+    // Crear nueva cita
     const { recordset: [{ MaxNum }] } = await pool.request().query(`
       SELECT ISNULL(MAX(CAST(SUBSTRING(CitaID, 4, 10) AS INT)), 0) AS MaxNum
       FROM Citas
       WHERE CitaID LIKE 'CIT%'
     `);
     const nuevoID = generarIDCita(MaxNum + 1);
-
+    
+    //Inserta
     await pool.request()
       .input('CitaID',          sql.VarChar(10), nuevoID)
       .input('ClienteID',       sql.VarChar(15), ClienteID)
@@ -213,7 +333,7 @@ router.get('/editar/:id', async (req, res) => {
     // La cita a editar, protegida por rol
     let reqSel = pool.request().input('id', sql.VarChar(10), id);
     let cond = '';
-    ({ cond, req: reqSel } = addAuthCondition(req, reqSel)); // agrega AND ClienteID=... / AND BarberoID=...
+    ({ cond, req: reqSel } = addAuthCondition(req, reqSel)); 
 
     const [clientes, barberos, servicios, citas, citaEditar] = await Promise.all([
       reqClientes.query(sqlClientes),
@@ -240,7 +360,8 @@ router.get('/editar/:id', async (req, res) => {
       barberos  : barberos.recordset, 
       servicios : servicios.recordset,
       citaEditar: citaEditar.recordset[0] || null,
-      rol       : req.session?.rol || null
+      rol       : req.session?.rol || null,
+      toast     : null
     });
 
   } catch (err) {
@@ -265,16 +386,63 @@ router.post('/editar/:id', async (req, res) => {
     if (isCliente(req))   ClienteID = req.session.clienteId;
     if (isBarbero(req))   BarberoID = req.session.barberoId;
 
-    const tHi = parseTimeHHMM(HoraInicio);
+    // Validaciones básicas
+    if (!ClienteID || !BarberoID || !ServicioID || !Fecha) {
+      const data = await cargarDatosCitas(req);
+      return res.status(400).render('citas', {
+        ...data,
+        citaEditar: null,
+        rol: req.session?.rol || null,
+        toast: { type: 'danger', message: 'Faltan datos obligatorios.' }
+      });
+    }
+
+    // Valida horas 
+     const tHi = parseTimeHHMM(HoraInicio);
     const tHf = parseTimeHHMM(HoraFin);
-    if (!tHi || !tHf) throw new Error('Hora inválida');
-    if (minutesOf(tHf) <= minutesOf(tHi))
-      throw new Error('HoraInicio debe ser menor que HoraFin');
+    if (!tHi || !tHf) {
+      const data = await cargarDatosCitas(req);
+      return res.status(400).render('citas', {
+        ...data,
+        citaEditar: null,
+        rol: req.session?.rol || null,
+        toast: { type: 'danger', message: 'Hora inválida. Use formato HH:mm.' }
+      });
+    }
+    if (minutesOf(tHf) <= minutesOf(tHi)) {
+      const data = await cargarDatosCitas(req);
+      return res.status(400).render('citas', {
+        ...data,
+        citaEditar: null,
+        rol: req.session?.rol || null,
+        toast: { type: 'danger', message: 'La hora de fin debe ser mayor que la hora de inicio.' }
+      });
+    }
 
     const hiDate = timeAsDate(tHi.h, tHi.mi);
     const hfDate = timeAsDate(tHf.h, tHf.mi);
 
     await setUsuarioContext(req);
+
+    // Valida disponibilidad del barbero
+    const choque = await hayChoqueBarbero({
+      BarberoID,
+      Fecha,
+      HoraInicio: hiDate,
+      HoraFin: hfDate,
+      excludeCitaID: id
+    });
+
+     if (choque) {
+      const data = await cargarDatosCitas(req);
+      return res.status(409).render('citas', {
+        ...data,
+        
+        citaEditar: { CitaID: id, ClienteID, BarberoID, ServicioID, Fecha, HoraInicio, HoraFin, Estado, Notas },
+        rol: req.session?.rol || null,
+        toast: { type: 'danger', message: 'El barbero ya tiene una cita en ese horario. Elige otra hora o barbero.' }
+      });
+    }
 
     let rq = pool.request()
       .input('CitaID',     sql.VarChar(10), id)

@@ -74,16 +74,16 @@ router.get('/editar/:id', async (req, res) => {
     const { id } = req.params;
     const esCliente = req.session?.rol === 'cliente' && req.session?.clienteId;
 
-     // 1) Validar que un cliente NO pueda editar otro cliente
+     // 1) Valida que un cliente no pueda editar otro cliente
      if (esCliente && req.session.clienteId !== id) {
       return res.status(403).send('No autorizado');
     }
-    // 2) Obtener el cliente a editar
+    // 2) Obtiene el cliente a editar
     const qCliente = await pool.request()
       .input('id', sql.VarChar(15), id)
       .query("SELECT * FROM Clientes WHERE ClienteID = @id AND Estado = 'A'");
 
-    // 3) Obtener lista de clientes según rol
+    // 3) Obtiene lista de clientes según rol
     let queryLista = "SELECT * FROM Clientes WHERE Estado = 'A'";
     let reqLista = pool.request();
 
@@ -93,7 +93,7 @@ router.get('/editar/:id', async (req, res) => {
     }
 
     const clientes = await reqLista.query(queryLista);
-     // 4) Mostrar vista
+     // 4) Muestra vista
     res.render('clientes', {
       clientes: clientes.recordset,
       clienteEditar: qCliente.recordset[0] || null

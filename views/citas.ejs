@@ -1,18 +1,18 @@
 <%- include('partials/header', { titulo: 'Citas' }) %>
 
-<!-- Logo lateral (solo pantallas grandes) -->
+<!-- Logo lateral -->
 <style>
   .logo-side {
     position: fixed;
-    left: 10px;           /* Ajusta la distancia al borde izquierdo */
-    top: 96px;            /* Ajusta para que no tape la navbar */
-    width: 260px;         /* Tamaño del logo */
-    opacity: .10;         /* Transparencia para que no moleste */
-    z-index: 0;           /* Debajo del contenido */
-    pointer-events: none; /* No bloquea clics del contenido */
+    left: 10px;           
+    top: 96px;            
+    width: 260px;        
+    opacity: .10;         
+    z-index: 0;           
+    pointer-events: none; 
     filter: grayscale(100%);
   }
-  @media (max-width: 1399.98px) { /* Se oculta en pantallas medianas/pequeñas */
+  @media (max-width: 1399.98px) { 
     .logo-side { display: none; }
   }
 </style>
@@ -250,5 +250,39 @@ const selectedBarberoID =
     }, false);
   })();
 </script>
+
+<!-- Toast / notificaciones -->
+<div class="position-fixed top-0 end-0 p-3" style="z-index:1100">
+  <div id="appToast" class="toast align-items-center text-bg-primary border-0" role="alert" aria-live="assertive" aria-atomic="true">
+    <div class="d-flex">
+      <div class="toast-body" id="appToastBody">Mensaje</div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Cerrar"></button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // -------- TOAST ----------
+  const data = <%- JSON.stringify(toast || null) %>;
+
+  if (data) {
+    const el = document.getElementById('appToast');
+    const body = document.getElementById('appToastBody');
+
+    el.classList.remove('text-bg-primary','text-bg-success','text-bg-danger','text-bg-warning','text-bg-info');
+    el.classList.add({
+      success: 'text-bg-success',
+      danger:  'text-bg-danger',
+      warning: 'text-bg-warning',
+      info:    'text-bg-info'
+    }[data.type] || 'text-bg-primary');
+
+    body.textContent = data.message || 'Notificación';
+    const t = bootstrap.Toast.getOrCreateInstance(el, { delay: 3500 });
+    t.show();
+  }
+</script>
+
+
 
 <%- include('partials/footer') %>
