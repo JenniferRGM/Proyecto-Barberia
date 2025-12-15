@@ -235,7 +235,7 @@ router.get('/json', async (_req, res) => {
 router.get('/menu', async (_req, res) => {
   await poolConnect;
   const rs = await pool.request().query(`
-    SELECT ProductoID, Nombre, Descripcion, PrecioVenta AS Precio, StockActual, Imagen
+    SELECT ProductoID, Nombre, Descripcion, PrecioVenta AS Precio, StockActual, StockMinimo, Imagen
     FROM InventarioProductos
     ORDER BY Nombre
   `);
@@ -245,7 +245,7 @@ router.get('/menu', async (_req, res) => {
 router.get('/api', async (_req, res) => {
   await poolConnect;
   const rs = await pool.request().query(`
-    SELECT ProductoID, Nombre, Descripcion, PrecioVenta AS Precio, StockActual, Imagen
+    SELECT ProductoID, Nombre, Descripcion, PrecioVenta AS Precio, StockActual, StockMinimo, Imagen
     FROM InventarioProductos
     ORDER BY Nombre
   `);
